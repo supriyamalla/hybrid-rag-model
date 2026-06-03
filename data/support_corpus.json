@@ -1,0 +1,90 @@
+[
+  {
+    "doc_id": "PA-ONCORIX-001",
+    "title": "Prior Authorization Process for Oncorix",
+    "doc_type": "prior_auth",
+    "product": "Oncorix",
+    "region": null,
+    "content": "Prior authorization (PA) for Oncorix is required by most commercial and Medicare Part B plans for advanced solid tumor indications. The prescriber must supply: (1) confirmed diagnosis with ICD-10 code and stage, (2) biomarker testing results where indicated (HER2 status, MSI status), (3) prior therapy history including progression on any first-line regimen, and (4) requested dosing schedule (50 mg/m² IV every 3 weeks). Most payers respond within 5–7 business days. If denied, the appeal must include peer-reviewed literature supporting the use; the manufacturer's medical affairs team can supply a letter of medical necessity within 48 hours on request. Reps should never submit PA paperwork on behalf of an office, but may help educate staff on documentation requirements."
+  },
+  {
+    "doc_id": "PA-IMMUNO-001",
+    "title": "Prior Authorization Process for ImmunoShield",
+    "doc_type": "prior_auth",
+    "product": "ImmunoShield",
+    "region": null,
+    "content": "ImmunoShield prior authorization is required by virtually every payer given its $4,500/unit acquisition cost. Required documentation: (1) confirmed autoimmune diagnosis (rheumatoid arthritis, psoriatic arthritis, or ulcerative colitis) with disease activity score, (2) documented failure or intolerance of at least one TNF-inhibitor (mandatory step therapy in 90%+ of plans), (3) hepatitis B / TB screening results within the past 6 months, and (4) treatment goals. Decisions typically take 7–14 business days. The manufacturer's PA support program provides electronic submission and dedicated PA specialists who follow up with payers; using this program has cut average approval time to 9 days."
+  },
+  {
+    "doc_id": "DOSE-ONCORIX-001",
+    "title": "Oncorix Dosing Guidelines",
+    "doc_type": "dosing",
+    "product": "Oncorix",
+    "region": null,
+    "content": "Oncorix is administered as an IV infusion at 50 mg/m² every 3 weeks for adult patients with advanced solid tumors. Premedication with a corticosteroid and antihistamine is required to reduce infusion-related reactions. Infusion duration is 60 minutes for the first cycle, 30 minutes thereafter if no reactions occurred. Dose reductions for toxicity: first reduction to 40 mg/m², second to 30 mg/m²; further reductions require discontinuation. Treatment continues until disease progression or unacceptable toxicity. No dose adjustment is required for mild renal or hepatic impairment; severe hepatic impairment is a contraindication."
+  },
+  {
+    "doc_id": "DOSE-CARDIOZEN-001",
+    "title": "Cardiozen Dosing and Titration",
+    "doc_type": "dosing",
+    "product": "Cardiozen",
+    "region": null,
+    "content": "Cardiozen is dosed orally once daily. Starting dose is 10 mg for most patients. Titration to 20 mg may be considered after 4 weeks if LDL-C reduction targets are not met. Maximum dose is 40 mg daily. No dose adjustment is required for mild to moderate renal impairment. In severe hepatic impairment, the drug is contraindicated. Cardiozen may be taken with or without food, but consistency improves adherence. Co-administration with strong CYP3A4 inhibitors requires dose reduction to 5 mg daily."
+  },
+  {
+    "doc_id": "PAP-ONCORIX-001",
+    "title": "Patient Assistance Program for Oncorix",
+    "doc_type": "patient_assistance",
+    "product": "Oncorix",
+    "region": null,
+    "content": "The manufacturer offers a patient assistance program (PAP) for eligible Oncorix patients without insurance coverage or with high out-of-pocket costs. Eligibility: US residents, household income at or below 500% of the federal poverty level, and documented insurance denial or lack of coverage. Approved patients receive Oncorix at no cost, shipped directly to the treating institution. The co-pay assistance program for commercially insured patients caps out-of-pocket cost at $25 per infusion, with an annual maximum of $25,000. Reps can direct offices to the access support hotline; reps must not enroll patients themselves or handle patient PHI."
+  },
+  {
+    "doc_id": "PAP-IMMUNO-001",
+    "title": "ImmunoShield Patient Assistance Program",
+    "doc_type": "patient_assistance",
+    "product": "ImmunoShield",
+    "region": null,
+    "content": "The ImmunoShield Patient Assistance Program (IPAP) provides ImmunoShield at no cost to uninsured or underinsured patients meeting eligibility criteria: US residents, household income at or below 400% FPL, and no other coverage (private or public). For commercially insured patients, the co-pay support card caps patient cost at $5 per infusion (annual savings cap $20,000). Government-insured patients (Medicare, Medicaid, TRICARE) are not eligible for the co-pay card. A foundation grant pathway exists for Medicare patients facing high coinsurance — refer the office to the access support team."
+  },
+  {
+    "doc_id": "AE-GENERAL-001",
+    "title": "General Adverse Event Reporting Obligations",
+    "doc_type": "adverse_events",
+    "product": null,
+    "region": null,
+    "content": "Federal regulations and company policy require all employees, including sales representatives, to report any adverse event they become aware of, for any company product, within 24 hours. This includes events reported informally during a sales call, mentioned by office staff, or seen in public posts. Include: patient initials (if known), age range, the product involved, the event, and any outcome. Do not request additional clinical details from the source; medical affairs will follow up. Failure to report can result in regulatory action against the company and disciplinary action against the rep."
+  },
+  {
+    "doc_id": "AE-ONCORIX-001",
+    "title": "Common Adverse Events for Oncorix",
+    "doc_type": "adverse_events",
+    "product": "Oncorix",
+    "region": null,
+    "content": "The most frequently reported Oncorix adverse events from pivotal trial data: peripheral neuropathy (approximately 30% any grade, 8% grade ≥3), neutropenia (25% / 12% grade ≥3), fatigue (40%), nausea (35%), and infusion-related reactions in the first cycle (15%). Grade ≥3 peripheral neuropathy requires dose reduction per the dose-reduction algorithm in the prescribing information; persistent grade 3 neuropathy after dose reduction is a discontinuation criterion. Febrile neutropenia is a medical emergency and must be reported as a serious adverse event. Reps must never offer medical advice on AE management; refer the HCP to medical affairs or the prescribing information."
+  },
+  {
+    "doc_id": "FORM-CARDIOZEN-NE",
+    "title": "Cardiozen Northeast Regional Formulary Status",
+    "doc_type": "formulary",
+    "product": "Cardiozen",
+    "region": "Northeast",
+    "content": "As of the most recent quarterly update, Cardiozen is on the preferred tier (Tier 2) for the three largest commercial payers in the Northeast region. UnitedHealthcare requires step therapy through atorvastatin; Aetna requires step therapy through any high-intensity statin; Blue Cross Blue Shield of Massachusetts has no step therapy requirement. Medicare Part D plans in the region place Cardiozen on Tier 3 with prior authorization. Reps in the Northeast should lead with the BCBS-MA story when calling on accounts with high BCBS-MA mix."
+  },
+  {
+    "doc_id": "COMP-CARDIOZEN-001",
+    "title": "Cardiozen vs. Competitor Comparison",
+    "doc_type": "competitive",
+    "product": "Cardiozen",
+    "region": null,
+    "content": "Cardiozen differentiation versus the leading external competitor (referred to here as Product X): (1) once-daily oral dosing vs. Product X's twice-daily regimen; (2) demonstrated 52% mean LDL-C reduction at 20 mg in the pivotal trial vs. Product X's 41% at the equivalent dose; (3) no required lipid panel monitoring after week 12 per the label, vs. Product X's quarterly monitoring requirement; (4) co-pay card with $0 minimum vs. Product X's $25 minimum. Reps must only compare on the approved messaging; off-label or unsupported comparisons are not permitted. The competitive grid on the rep portal is updated quarterly by medical affairs."
+  },
+  {
+    "doc_id": "OBJ-ONCORIX-001",
+    "title": "Common Objections and Approved Responses — Oncorix",
+    "doc_type": "objection_handling",
+    "product": "Oncorix",
+    "region": null,
+    "content": "Top objections heard in the field and approved responses: (1) 'PA is too painful' — direct office to the manufacturer's PA support program, which provides electronic submission and PA specialists who follow up directly with payers; average approval time has dropped to 4 days. (2) 'My patients can't afford it' — review the co-pay assistance program ($25 per infusion cap) and the PAP for uninsured patients. (3) 'I'm worried about peripheral neuropathy' — reference the grade ≥3 neuropathy management guide on the rep portal and offer to set up a peer-to-peer call with a medical science liaison. (4) 'I prefer once-weekly cisplatin' — acknowledge clinician preference; the every-3-week Oncorix schedule reduces patient infusion-day visits by roughly two-thirds, which is a meaningful patient-experience differentiator for adherence and quality of life. Never disparage a competitor or make claims outside the FDA-approved label."
+  }
+]

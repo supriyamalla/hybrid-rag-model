@@ -1,0 +1,6 @@
+claude-agent-sdk>=0.2.87
+streamlit>=1.30.0
+databricks-sql-connector>=3.0.0
+databricks-vectorsearch>=0.40
+python-dotenv>=1.0.0
+pandas>=2.0.0
