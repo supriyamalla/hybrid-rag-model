@@ -16,6 +16,10 @@ def _opt(name: str, default: str) -> str:
 ROUTER_MODEL = _opt("ROUTER_MODEL", "claude-haiku-4-5-20251001")
 GENERATION_MODEL = _opt("GENERATION_MODEL", "claude-sonnet-4-6")
 
+# Text-to-SQL: total attempts to generate+execute before giving up. On a failure the
+# error is fed back to the model so it can self-correct (transient alias/typo errors).
+SQL_MAX_ATTEMPTS = int(_opt("SQL_MAX_ATTEMPTS", "3"))
+
 # Databricks workspace (for remote SQL + Vector Search SDK)
 DATABRICKS_HOST = os.environ.get("DATABRICKS_HOST", "")
 DATABRICKS_TOKEN = os.environ.get("DATABRICKS_TOKEN", "")

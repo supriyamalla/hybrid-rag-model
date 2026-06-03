@@ -180,6 +180,87 @@ for _ in range(30):
 
 ---
 
+## 13. Vector Search auth notice printed on every query despite `disable_notice=True`
+
+**What we hit:** `python -m app.rag_agent` printed `[NOTICE] Using a notebook authentication token...` once per query, even though `VectorSearchClient(disable_notice=True)` was already set in `app/rag_agent.py`.
+
+**Root cause:** `index.similarity_search(...)` has its **own** `disable_notice` parameter that defaults to `False` and re-emits the notice on every call — independent of the client-level setting. Suppressing it on the client doesn't suppress it on the per-query call.
+
+**Resolution:** Pass `disable_notice=True` in the `similarity_search` kwargs in `retrieve()`:
+```python
+kwargs = {..., "disable_notice": True}  # similarity_search re-emits the notice per call
+```
+
+**Lesson:** SDK notice flags aren't always inherited from the client. Check the method signature too.
+
+---
+
+## 14. SQL agent hallucinated `targets.period_start` — semantic layer drifted from real schema
+
+**What we hit:** The hybrid query in `python -m app.orchestrator` failed with `[UNRESOLVED_COLUMN] t.period_start cannot be resolved`. The suggestion list (`t.product_id`, `r.state`, `pr.tier`, `p.brand_name`) showed columns that didn't match `app/semantic_layer.py`.
+
+**Root cause:** `semantic_layer.py` documented the `targets` table with `period_start DATE` / `period_end DATE` / `target_units INT` columns that **don't exist**. The real table stores the period as integer columns: `quarter INT` (1–4) and `year INT`, plus `target_revenue`. The SQL agent faithfully used the documented (wrong) columns.
+
+**Resolution:** Introspected the live schema with `DESCRIBE` and corrected the `targets` block + the `target_attainment_revenue` metric to join on `targets.year = YEAR(sale_date) AND targets.quarter = QUARTER(sale_date)`. Removed the `target_attainment_units` metric (no `target_units` column exists).
+
+**Lesson:** The semantic layer is the SQL agent's only source of truth — when a query fails on a "missing" column, verify the doc against `DESCRIBE`, not the other way around.
+
+---
+
+## 15. `sales.units` doesn't exist — actual column is `units_sold`
+
+**What we hit:** After fixing #14, a re-run failed on `s.units cannot be resolved. Did you mean s.units_sold`. SQL generation is non-deterministic, so this latent bug only surfaced when the agent happened to generate a units-based query.
+
+**Root cause:** Same schema drift as #14 — `semantic_layer.py` listed the column as `units` (in both the `sales` table block and the `units` metric formula), but the real column is `units_sold`.
+
+**Resolution:** Changed both the `sales` table column listing and the `units` metric to `units_sold`.
+
+**Lesson:** Non-deterministic text-to-SQL means latent schema-doc bugs hide until a specific generation path hits them. After fixing one column error, audit the whole schema doc against `DESCRIBE` rather than fixing one at a time.
+
+---
+
+## 16. `target_attainment_revenue` was non-deterministic AND wrong (66.6% vs 40.3%)
+
+**What we hit:** The same hybrid question produced **66.6%** attainment on one run and **40.3%** on another — identical revenue ($14,387), different target denominator ($21,599 vs ~$35,717).
+
+**Root cause:** The metric guidance told the agent to join `sales ⋈ targets` and divide `SUM(revenue) / SUM(target_revenue)`. That single join (a) fans out — a rep's target row is duplicated once per sale — and (b) silently drops reps who have a target but no matching sales. Both corrupt the denominator, and the agent computed it differently across runs. Ground truth (verified by summing the 5 distinct Northeast Cardiozen Q4-2025 target rows directly): **$14,387.10 / $35,717.00 = 40.3%**. The 66.6% was wrong.
+
+**Resolution:** Rewrote the `target_attainment_revenue` definition in `semantic_layer.py` to require aggregating numerator and denominator **independently** (one CTE for sales, one for targets, then divide) — never a direct sales↔targets join. Verified deterministic: 3/3 runs returned 0.4028.
+
+**Lesson:** Any metric that divides two aggregates from different fact/dimension tables must aggregate them separately. A join-then-aggregate fans out and is both wrong and unstable.
+
+---
+
+## 17. Transient text-to-SQL alias typo broke the hybrid query
+
+**What we hit:** A later orchestrator run failed with `tg.target_revenue cannot be resolved. Did you mean tgt.target_revenue` — the model defined a CTE as `tgt` but referenced it as `tg` on one line. Pure self-inconsistency, not a schema problem. The two-CTE shape required by the #16 fix gave the model more aliases to juggle, so an occasional typo slipped through.
+
+**Root cause:** `run_sql_question()` generated once and executed once. Any single malformed generation killed the query with no recovery.
+
+**Resolution:** Added a retry-on-error loop in `app/sql_agent.py` (`config.SQL_MAX_ATTEMPTS`, default 3). On any generation/validation/execution error, the failed SQL + error message are fed back to the model to self-correct, up to N attempts; retries log to stderr. Verified by injecting a forced bad-alias first attempt — the loop recovered on attempt 2 and returned the correct 40.3%.
+
+**Lesson:** Text-to-SQL is inherently flaky even with a correct prompt. A self-correcting retry loop (feed the DB error back to the model) is the standard mitigation and turns transient typos into a non-event.
+
+---
+
+## 18. Semantic layer missing several real columns
+
+**What we hit:** `DESCRIBE` revealed columns absent from `semantic_layer.py`, so the agent couldn't answer questions using them (e.g. "revenue by prescriber tier").
+
+**Root cause:** Documentation drift — the schema doc was a subset of the real tables.
+
+**Resolution:** Added, with values verified against the live data:
+- `regions`: `territory` (sub-region grouping), `state` (US state; one row per `region_id`)
+- `sales_reps`: `seniority_level` — 'Junior' / 'Mid' / 'Senior'
+- `prescribers`: `tier` — 'High' / 'Medium' / 'Low'
+- `sales`: `region_id` (redundant — always equals the rep's region), `discount_pct` (a **fraction** 0.00–0.20, i.e. 0–20%, not 0–100)
+
+Verified a cross-tab query over tier × seniority × avg discount runs correctly.
+
+**Lesson:** Check actual value ranges, not just column names — `discount_pct` reads like a 0–100 percentage but is stored as a 0–0.20 fraction; documenting the wrong scale would skew every discount calculation.
+
+---
+
 ## Useful diagnostics learned along the way
 
 - **Where is `ANTHROPIC_API_KEY` set?**
@@ -207,4 +288,18 @@ for _ in range(30):
   from databricks.vector_search.client import VectorSearchClient
   vsc = VectorSearchClient(disable_notice=True)
   print([e["name"] for e in vsc.list_endpoints().get("endpoints", [])])
+  ```
+
+- **Verify the semantic layer against the real schema** (root cause of #14–#16, #18).
+  Reuse the SQL agent's own executor to `DESCRIBE` every table and check actual value
+  ranges before trusting the docs:
+  ```python
+  from app.sql_agent import _execute
+  from app import config
+  fqn = f"{config.SALES_CATALOG}.{config.SALES_SCHEMA}"
+  for t in ["sales", "targets", "products", "regions", "sales_reps", "prescribers"]:
+      cols, rows = _execute(f"DESCRIBE {fqn}.{t}")
+      print(t, [(r[0], r[1]) for r in rows if r[0] and not str(r[0]).startswith("#")])
+  # And sanity-check scales/enums, e.g.:
+  print(_execute(f"SELECT MIN(discount_pct), MAX(discount_pct) FROM {fqn}.sales")[1])
   ```

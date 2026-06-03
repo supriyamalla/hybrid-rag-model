@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+import sys
 from typing import Any
 
 from claude_agent_sdk import query, ClaudeAgentOptions, ResultMessage
@@ -116,11 +117,42 @@ def _execute(sql: str) -> tuple[list[str], list[tuple[Any, ...]]]:
     return columns, rows
 
 
+def _retry_prompt(question: str, sql: str | None, error: Exception) -> str:
+    """Re-ask the model with the failed SQL and its error so it can self-correct."""
+    prev = f"\n--- YOUR PREVIOUS SQL ---\n{sql}\n" if sql else ""
+    return (
+        f"{question}\n{prev}"
+        f"--- IT FAILED WITH ---\n{error}\n"
+        "Return a corrected single Spark SQL SELECT that fixes this error. "
+        "Output ONLY the SQL."
+    )
+
+
 def run_sql_question(question: str, scope: dict | None = None) -> dict:
-    """Top-level entry point. Returns {sql, columns, rows}."""
-    sql = generate_sql(question, scope)
-    columns, rows = _execute(sql)
-    return {"sql": sql, "columns": columns, "rows": [tuple(r) for r in rows]}
+    """Top-level entry point. Returns {sql, columns, rows}.
+
+    Generation can occasionally emit a malformed query (bad alias, typo). On any
+    generation/validation/execution error we feed the error back to the model and
+    retry, up to config.SQL_MAX_ATTEMPTS times.
+    """
+    prompt = question
+    last_err: Exception | None = None
+    for attempt in range(config.SQL_MAX_ATTEMPTS):
+        sql: str | None = None
+        try:
+            sql = generate_sql(prompt, scope)
+            columns, rows = _execute(sql)
+            return {"sql": sql, "columns": columns, "rows": [tuple(r) for r in rows]}
+        except Exception as e:  # noqa: BLE001 — surface any failure as a retry signal
+            last_err = e
+            if attempt < config.SQL_MAX_ATTEMPTS - 1:
+                print(
+                    f"[sql_agent] attempt {attempt + 1}/{config.SQL_MAX_ATTEMPTS} failed, "
+                    f"retrying: {e}",
+                    file=sys.stderr,
+                )
+                prompt = _retry_prompt(question, sql, e)
+    raise last_err
 
 
 SAMPLE_QUESTION = "What was total revenue by product in the Northeast?"
