@@ -172,6 +172,36 @@ for _ in range(30):
 
 ---
 
+## 13. PDF-extracted text has no `\n\n` paragraph breaks — original chunker degraded to 1-chunk-per-doc
+
+**What we hit:** After switching from hand-written JSON to PDFs, the existing paragraph-split chunker (`text.split("\n\n")`) found no paragraph breaks because pymupdf extracts PDF text with single `\n` between lines, not blank lines between paragraphs. Result: each 2000+ char PDF doc would become one giant chunk — bad for embedding quality and retrieval precision.
+
+**Resolution:** Smarter chunker that tries paragraph split first, falls back to line-grouping for PDF-extracted text:
+```python
+def chunk(text, target=800):
+    text = text.strip()
+    if len(text) <= target:
+        return [text]
+    paras = [p.strip() for p in text.split("\n\n") if p.strip()]
+    if len(paras) <= 1:
+        paras = [ln.strip() for ln in text.split("\n") if ln.strip()]
+    # ... group into ~target-char chunks ...
+```
+
+**Lesson:** Any chunker assumption about input formatting needs to handle both authored content (JSON, markdown — paragraph-aware) and machine-extracted content (PDF, OCR — line-only). Test both before committing to a strategy.
+
+---
+
+## 14. Re-ingest after corpus regeneration — pulling from GitHub raw URL beats copy-pasting
+
+**What we did:** When regenerating the corpus from PDFs, the Databricks notebook needs the new content. Options were: (a) paste the new corpus into the notebook cell as a Python literal, (b) sync repo via Databricks Repos and read from `/Workspace/Repos/...`, (c) `urlopen(raw.githubusercontent.com/...)` from inside the notebook.
+
+**Chose (c)** because the repo was already on GitHub and the file was small. Every future re-ingest is now "push locally → re-run the cell" with no copy-paste. Zero Databricks Repos setup.
+
+**Lesson:** When iterating on a data file that lives in a public repo, the raw URL is the cleanest sync mechanism for a notebook that doesn't share a filesystem with your laptop. For private repos, Databricks Repos becomes the right answer instead.
+
+---
+
 ## 11. Databricks notebook can't see local `data/support_corpus.json`
 
 **What we hit:** `ingest.py` reads the corpus from a local file path. The Databricks notebook runs in the cloud, with no access to your laptop's filesystem.
