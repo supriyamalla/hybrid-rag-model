@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pharma Rep Copilot — How It Works</title>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --border: #e4e6ed;
+      --text: #1f2330;
+      --muted: #5b6275;
+      --primary: #6366f1;
+      --primary-soft: #eef0ff;
+      --code-bg: #1e2230;
+      --code-text: #e8eaf2;
+      --analytical: #3b82f6;
+      --knowledge: #10b981;
+      --hybrid: #8b5cf6;
+      --shadow: 0 1px 3px rgba(15, 23, 42, .06), 0 1px 2px rgba(15, 23, 42, .04);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+    code, pre, .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, Monaco, Consolas, "Courier New", monospace; font-size: 13px; }
+    pre {
+      background: var(--code-bg);
+      color: var(--code-text);
+      padding: 16px 18px;
+      border-radius: 8px;
+      overflow-x: auto;
+      line-height: 1.5;
+      margin: 0;
+    }
+    pre .k  { color: #c792ea; } /* keyword */
+    pre .s  { color: #c3e88d; } /* string */
+    pre .c  { color: #6b7080; font-style: italic; } /* comment */
+    pre .n  { color: #82aaff; } /* function/name */
+    pre .t  { color: #ffcb6b; } /* type */
+    a { color: var(--primary); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ---------- LAYOUT ---------- */
+    .topbar {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(255,255,255,.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .topbar .brand { font-weight: 700; letter-spacing: -0.02em; }
+    .topbar .brand .pill {
+      display: inline-block; font-size: 11px; padding: 2px 8px;
+      background: var(--primary-soft); color: var(--primary);
+      border-radius: 999px; margin-left: 6px; font-weight: 600;
+    }
+    .topbar nav a {
+      margin-left: 22px; color: var(--muted); font-size: 14px; font-weight: 500;
+    }
+    .topbar nav a:hover { color: var(--text); text-decoration: none; }
+    .topbar nav a.active { color: var(--primary); }
+
+    main {
+      max-width: 1080px; margin: 0 auto; padding: 40px 24px 80px;
+    }
+    section { margin-bottom: 64px; scroll-margin-top: 80px; }
+    section h2 {
+      font-size: 26px; letter-spacing: -0.02em; margin: 0 0 6px;
+    }
+    section .lede { color: var(--muted); margin: 0 0 22px; max-width: 720px; font-size: 15.5px; }
+
+    .hero {
+      padding: 48px 0 32px;
+    }
+    .hero h1 { font-size: 38px; margin: 0 0 10px; letter-spacing: -0.025em; line-height: 1.15; }
+    .hero p { color: var(--muted); font-size: 17px; max-width: 740px; margin: 0; }
+    .hero .repo {
+      display: inline-flex; align-items: center; gap: 6px; margin-top: 18px;
+      padding: 8px 14px; background: var(--card); border: 1px solid var(--border);
+      border-radius: 8px; font-size: 14px; font-weight: 500;
+    }
+
+    /* ---------- CARDS ---------- */
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; box-shadow: var(--shadow); padding: 22px 24px;
+    }
+    .card + .card { margin-top: 14px; }
+    .card h3 { margin: 0 0 4px; font-size: 17px; }
+    .card .sub { color: var(--muted); font-size: 13.5px; margin: 0 0 12px; }
+
+    /* ---------- ARCHITECTURE DIAGRAM ---------- */
+    .diagram-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; box-shadow: var(--shadow); }
+    .diagram { width: 100%; height: auto; display: block; }
+    .diagram .node rect { fill: #ffffff; stroke: var(--border); stroke-width: 1.5; cursor: pointer; transition: all .15s; }
+    .diagram .node:hover rect { fill: var(--primary-soft); stroke: var(--primary); }
+    .diagram .node text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; font-size: 13px; fill: var(--text); pointer-events: none; }
+    .diagram .node .meta { font-size: 11px; fill: var(--muted); }
+    .diagram .arrow { stroke: #9aa1b3; stroke-width: 1.5; fill: none; }
+    .diagram .arrow-head { fill: #9aa1b3; }
+    .diagram .label { font-size: 11.5px; fill: var(--muted); }
+    .diagram .external rect { fill: #fafbff; stroke-dasharray: 4 3; }
+
+    .legend {
+      margin-top: 18px; display: flex; gap: 24px; flex-wrap: wrap;
+      font-size: 13px; color: var(--muted);
+    }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .legend .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+    .legend .dot.solid { background: #ffffff; border: 1.5px solid var(--border); }
+    .legend .dot.dashed { background: #fafbff; border: 1.5px dashed var(--border); }
+
+    /* ---------- TABS ---------- */
+    .tabs {
+      display: flex; gap: 6px; padding: 4px; background: #eef0f5;
+      border-radius: 10px; width: fit-content; margin-bottom: 18px;
+    }
+    .tab-btn {
+      border: none; background: transparent; padding: 8px 16px;
+      border-radius: 7px; font-weight: 600; font-size: 14px;
+      color: var(--muted); cursor: pointer; transition: all .15s;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { background: var(--card); color: var(--text); box-shadow: var(--shadow); }
+    .tab-btn[data-route="analytical"].active { color: var(--analytical); }
+    .tab-btn[data-route="knowledge"].active { color: var(--knowledge); }
+    .tab-btn[data-route="hybrid"].active { color: var(--hybrid); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .route-card {
+      border-left: 4px solid var(--analytical);
+      padding-left: 18px; margin-bottom: 18px;
+    }
+    .route-card[data-route="knowledge"] { border-left-color: var(--knowledge); }
+    .route-card[data-route="hybrid"] { border-left-color: var(--hybrid); }
+    .route-card .question {
+      font-style: italic; color: var(--muted); margin: 0 0 14px; font-size: 15px;
+    }
+
+    /* ---------- ACCORDION (modules) ---------- */
+    .module {
+      border: 1px solid var(--border); border-radius: 12px;
+      background: var(--card); margin-bottom: 12px; overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .module-head {
+      width: 100%; padding: 18px 22px; background: transparent; border: none;
+      text-align: left; cursor: pointer; display: flex; align-items: center; gap: 16px;
+      font: inherit; color: inherit;
+    }
+    .module-head:hover { background: #fafbff; }
+    .module-head .filename {
+      font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+      font-size: 13px; font-weight: 600; color: var(--primary);
+      background: var(--primary-soft); padding: 4px 10px; border-radius: 6px;
+      white-space: nowrap;
+    }
+    .module-head .title { font-weight: 600; font-size: 15px; }
+    .module-head .one-liner { color: var(--muted); font-size: 13.5px; margin-left: auto; }
+    .module-head .chevron {
+      margin-left: 14px; transition: transform .2s; color: var(--muted);
+      font-size: 14px;
+    }
+    .module.open .module-head .chevron { transform: rotate(90deg); }
+    .module-body { display: none; padding: 4px 22px 22px; border-top: 1px solid var(--border); }
+    .module.open .module-body { display: block; }
+
+    .api-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 16px 0;
+    }
+    .api-block h5 {
+      margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--muted); font-weight: 700;
+    }
+    .api-block ul { margin: 0; padding-left: 18px; font-size: 14px; }
+    .api-block li { margin-bottom: 4px; }
+
+    /* ---------- TRACE STEPPER ---------- */
+    .trace {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; box-shadow: var(--shadow); overflow: hidden;
+    }
+    .trace-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 18px; background: #fafbff; border-bottom: 1px solid var(--border);
+    }
+    .trace-nav .steps {
+      display: flex; gap: 6px; flex-wrap: wrap;
+    }
+    .step-dot {
+      width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--border);
+      background: #fff; color: var(--muted); font-size: 12px; font-weight: 600;
+      cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+      transition: all .15s;
+    }
+    .step-dot:hover { border-color: var(--primary); }
+    .step-dot.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .step-dot.done { background: var(--primary-soft); color: var(--primary); border-color: var(--primary); }
+    .trace-buttons button {
+      background: var(--primary); color: #fff; border: none; padding: 8px 16px;
+      border-radius: 7px; font: inherit; font-weight: 600; font-size: 13.5px;
+      cursor: pointer; margin-left: 6px;
+    }
+    .trace-buttons button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .trace-buttons button.secondary { background: #fff; color: var(--text); border: 1px solid var(--border); }
+    .trace-step {
+      padding: 26px 28px; display: none;
+    }
+    .trace-step.active { display: block; }
+    .trace-step h4 {
+      margin: 0 0 6px; font-size: 17px; display: flex; align-items: center; gap: 10px;
+    }
+    .trace-step .step-num {
+      background: var(--primary); color: #fff; border-radius: 6px;
+      width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700;
+    }
+    .trace-step .where {
+      font-family: "JetBrains Mono", Menlo, Consolas, monospace; font-size: 12.5px;
+      color: var(--muted); margin: 0 0 18px;
+    }
+    .io-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 16px 0;
+    }
+    .io-box {
+      background: #fafbff; border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px 14px;
+    }
+    .io-box .io-label {
+      font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--muted); font-weight: 700; margin-bottom: 6px;
+    }
+    .io-box .io-content {
+      font-family: "JetBrains Mono", Menlo, Consolas, monospace; font-size: 12.5px;
+      white-space: pre-wrap; word-break: break-word;
+    }
+
+    /* ---------- DATA SHAPES ---------- */
+    .shape-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px;
+    }
+    .shape-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 18px 20px; box-shadow: var(--shadow);
+    }
+    .shape-card h4 { margin: 0 0 4px; font-size: 15px; }
+    .shape-card .from { color: var(--muted); font-size: 12.5px; margin: 0 0 12px; font-family: monospace; }
+
+    /* ---------- BADGES ---------- */
+    .badge {
+      display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px;
+      font-weight: 600; letter-spacing: 0.02em;
+    }
+    .badge.analytical { background: #dbeafe; color: var(--analytical); }
+    .badge.knowledge  { background: #d1fae5; color: var(--knowledge); }
+    .badge.hybrid     { background: #ede9fe; color: var(--hybrid); }
+    .badge.model      { background: #fef3c7; color: #b45309; }
+    .badge.tool       { background: #e0e7ff; color: var(--primary); }
+
+    /* ---------- DETAILS / NOTE ---------- */
+    .note {
+      background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px;
+      padding: 12px 16px; font-size: 14px; color: #78350f; margin: 14px 0;
+    }
+    .note strong { color: #92400e; }
+
+    @media (max-width: 720px) {
+      .topbar nav { display: none; }
+      .api-grid, .io-grid { grid-template-columns: 1fr; }
+      .module-head .one-liner { display: none; }
+      .hero h1 { font-size: 30px; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">Pharma Rep Copilot <span class="pill">how it works</span></div>
+  <nav>
+    <a href="#architecture">Architecture</a>
+    <a href="#routes">Routes</a>
+    <a href="#modules">Modules</a>
+    <a href="#trace">Trace a question</a>
+    <a href="#shapes">Data shapes</a>
+  </nav>
+</header>
+
+<main>
+
+<!-- ========== HERO ========== -->
+<section class="hero">
+  <h1>How the Pharma Rep Copilot works</h1>
+  <p>
+    A hybrid retrieval system that answers pharma sales-rep questions by routing each one to the
+    right data path — sales database, support documents, or both — and stitching one cited
+    answer with Claude. This page walks through every component, what it sends and receives,
+    and how a question flows end-to-end.
+  </p>
+  <a class="repo" href="https://github.com/supriyamalla/hybrid-rag-model" target="_blank" rel="noopener">
+    GitHub: supriyamalla/hybrid-rag-model →
+  </a>
+</section>
+
+<!-- ========== ARCHITECTURE ========== -->
+<section id="architecture">
+  <h2>Architecture at a glance</h2>
+  <p class="lede">
+    Three classes of question, three paths through the system. The <strong>router</strong> decides which
+    path(s) a question needs; the <strong>orchestrator</strong> runs them and hands the results to Claude
+    for synthesis. Click any node to jump to its module.
+  </p>
+
+  <div class="diagram-wrap">
+    <svg class="diagram" viewBox="0 0 880 700" xmlns="http://www.w3.org/2000/svg" aria-label="System architecture diagram">
+      <defs>
+        <marker id="arrowhead" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="8" markerHeight="8" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" class="arrow-head"/>
+        </marker>
+      </defs>
+
+      <!-- nodes -->
+      <g class="node" data-jump="streamlit_app">
+        <rect x="320" y="20" width="240" height="46" rx="8"/>
+        <text x="440" y="42" text-anchor="middle" font-weight="600">Streamlit chat UI</text>
+        <text x="440" y="58" text-anchor="middle" class="meta">app/streamlit_app.py</text>
+      </g>
+
+      <g class="node" data-jump="orchestrator">
+        <rect x="320" y="100" width="240" height="46" rx="8"/>
+        <text x="440" y="122" text-anchor="middle" font-weight="600">Orchestrator</text>
+        <text x="440" y="138" text-anchor="middle" class="meta">orchestrator.answer()</text>
+      </g>
+
+      <g class="node" data-jump="router">
+        <rect x="320" y="190" width="240" height="56" rx="8"/>
+        <text x="440" y="214" text-anchor="middle" font-weight="600">Router (classify + extract filters)</text>
+        <text x="440" y="232" text-anchor="middle" class="meta">router.py · Claude Haiku</text>
+      </g>
+
+      <!-- SQL branch -->
+      <g class="node" data-jump="sql_agent">
+        <rect x="90" y="300" width="240" height="56" rx="8"/>
+        <text x="210" y="324" text-anchor="middle" font-weight="600">SQL agent (Text-to-SQL)</text>
+        <text x="210" y="342" text-anchor="middle" class="meta">sql_agent.py · Claude Sonnet</text>
+      </g>
+      <g class="node external" data-jump="semantic_layer">
+        <rect x="90" y="390" width="240" height="46" rx="8"/>
+        <text x="210" y="412" text-anchor="middle" font-weight="600">Semantic layer (schema + metrics)</text>
+        <text x="210" y="428" text-anchor="middle" class="meta">semantic_layer.py</text>
+      </g>
+      <g class="node external">
+        <rect x="90" y="470" width="240" height="46" rx="8"/>
+        <text x="210" y="492" text-anchor="middle" font-weight="600">Databricks SQL warehouse</text>
+        <text x="210" y="508" text-anchor="middle" class="meta">workspace.pharma_sales</text>
+      </g>
+
+      <!-- RAG branch -->
+      <g class="node" data-jump="rag_agent">
+        <rect x="550" y="300" width="240" height="56" rx="8"/>
+        <text x="670" y="324" text-anchor="middle" font-weight="600">RAG agent (filtered retrieval)</text>
+        <text x="670" y="342" text-anchor="middle" class="meta">rag_agent.py</text>
+      </g>
+      <g class="node external">
+        <rect x="550" y="390" width="240" height="46" rx="8"/>
+        <text x="670" y="412" text-anchor="middle" font-weight="600">Databricks Vector Search</text>
+        <text x="670" y="428" text-anchor="middle" class="meta">workspace.pharma_copilot.*</text>
+      </g>
+      <g class="node external" data-jump="pdf_ingest">
+        <rect x="550" y="470" width="240" height="46" rx="8"/>
+        <text x="670" y="492" text-anchor="middle" font-weight="600">PDF ingestion (offline)</text>
+        <text x="670" y="508" text-anchor="middle" class="meta">pdf_ingest.py · build_synthetic_pdfs.py</text>
+      </g>
+
+      <!-- synthesis -->
+      <g class="node" data-jump="orchestrator">
+        <rect x="290" y="560" width="300" height="56" rx="8"/>
+        <text x="440" y="584" text-anchor="middle" font-weight="600">Synthesis</text>
+        <text x="440" y="602" text-anchor="middle" class="meta">orchestrator._synthesize · Claude Sonnet</text>
+      </g>
+
+      <g class="node">
+        <rect x="320" y="640" width="240" height="44" rx="8"/>
+        <text x="440" y="667" text-anchor="middle" font-weight="600">Cited answer back to UI</text>
+      </g>
+
+      <!-- arrows -->
+      <path class="arrow" d="M440,66 L440,100" marker-end="url(#arrowhead)"/>
+      <path class="arrow" d="M440,146 L440,190" marker-end="url(#arrowhead)"/>
+      <text x="455" y="170" class="label">orchestrator.answer(question)</text>
+
+      <path class="arrow" d="M380,246 Q260,275 250,300" marker-end="url(#arrowhead)"/>
+      <text x="190" y="278" class="label">needs_sql</text>
+
+      <path class="arrow" d="M500,246 Q620,275 630,300" marker-end="url(#arrowhead)"/>
+      <text x="610" y="278" class="label">needs_docs</text>
+
+      <path class="arrow" d="M210,356 L210,390" marker-end="url(#arrowhead)"/>
+      <path class="arrow" d="M210,436 L210,470" marker-end="url(#arrowhead)"/>
+
+      <path class="arrow" d="M670,356 L670,390" marker-end="url(#arrowhead)"/>
+      <path class="arrow" d="M670,436 L670,470" marker-end="url(#arrowhead)"/>
+
+      <!-- to synthesis -->
+      <path class="arrow" d="M250,516 Q310,560 360,560" marker-end="url(#arrowhead)"/>
+      <text x="280" y="548" class="label">sql + rows</text>
+      <path class="arrow" d="M630,516 Q570,560 520,560" marker-end="url(#arrowhead)"/>
+      <text x="555" y="548" class="label">retrieved chunks</text>
+
+      <path class="arrow" d="M440,616 L440,640" marker-end="url(#arrowhead)"/>
+    </svg>
+
+    <div class="legend">
+      <span><span class="dot solid"></span> code in this repo</span>
+      <span><span class="dot dashed"></span> external service / managed</span>
+      <span><span class="badge model">Claude Haiku</span> routing</span>
+      <span><span class="badge model">Claude Sonnet</span> SQL + synthesis</span>
+    </div>
+  </div>
+</section>
+
+<!-- ========== ROUTES ========== -->
+<section id="routes">
+  <h2>The three routes</h2>
+  <p class="lede">
+    Every question goes through the same router and gets exactly one of these labels.
+    The label decides which agents fire and what the synthesis prompt sees.
+  </p>
+
+  <div class="tabs" role="tablist">
+    <button class="tab-btn active" data-route="analytical" role="tab">Analytical</button>
+    <button class="tab-btn" data-route="knowledge" role="tab">Knowledge</button>
+    <button class="tab-btn" data-route="hybrid" role="tab">Hybrid</button>
+  </div>
+
+  <div class="tab-panel active" data-panel="analytical">
+    <div class="card route-card" data-route="analytical">
+      <h3><span class="badge analytical">analytical</span> &nbsp;Numbers from the sales database</h3>
+      <p class="question">"What was total revenue by product in the Northeast?"</p>
+      <p>The router sees performance / revenue / region terms. It returns:</p>
+      <pre><span class="c">// router output</span>
+{
+  "route": <span class="s">"analytical"</span>,
+  "filters": { "product": <span class="k">null</span>, "region": <span class="s">"Northeast"</span>, "doc_type": <span class="k">null</span> },
+  "reasoning": <span class="s">"asks for aggregate revenue numbers; sales DB only."</span>
+}</pre>
+      <p style="margin-top: 14px;">
+        <code>needs_sql = true</code>, <code>needs_docs = false</code>. The orchestrator calls
+        only the SQL agent. The semantic layer is rendered into the SQL prompt, Sonnet generates
+        a single <code>SELECT</code>, the validator checks it's read-only, the connector executes
+        it against the SQL warehouse. Synthesis cites the SQL result with <code>[SQL]</code>.
+      </p>
+    </div>
+  </div>
+
+  <div class="tab-panel" data-panel="knowledge">
+    <div class="card route-card" data-route="knowledge">
+      <h3><span class="badge knowledge">knowledge</span> &nbsp;Facts from support docs</h3>
+      <p class="question">"How does prior authorization work for Oncorix?"</p>
+      <p>The router sees a policy / process question naming a product:</p>
+      <pre><span class="c">// router output</span>
+{
+  "route": <span class="s">"knowledge"</span>,
+  "filters": { "product": <span class="s">"Oncorix"</span>, "region": <span class="k">null</span>, "doc_type": <span class="s">"prior_auth"</span> },
+  "reasoning": <span class="s">"PA process for a specific product → support docs."</span>
+}</pre>
+      <p style="margin-top: 14px;">
+        <code>needs_sql = false</code>, <code>needs_docs = true</code>. The RAG agent receives
+        the three filters and passes them to Vector Search's <code>filters={...}</code> arg, so
+        retrieval is semantic search <strong>constrained by BI metadata</strong>. Chunks below
+        <code>SIMILARITY_THRESHOLD</code> are dropped. Synthesis cites each fact with
+        <code>[&lt;doc_id&gt;]</code>.
+      </p>
+    </div>
+  </div>
+
+  <div class="tab-panel" data-panel="hybrid">
+    <div class="card route-card" data-route="hybrid">
+      <h3><span class="badge hybrid">hybrid</span> &nbsp;Numbers + docs, merged with citations</h3>
+      <p class="question">"Cardiozen Q3 2025 attainment in the Northeast — and what's the formulary situation?"</p>
+      <p>The router sees both an analytical clause and a policy clause:</p>
+      <pre><span class="c">// router output</span>
+{
+  "route": <span class="s">"hybrid"</span>,
+  "filters": { "product": <span class="s">"Cardiozen"</span>, "region": <span class="s">"Northeast"</span>, "doc_type": <span class="s">"formulary"</span> },
+  "reasoning": <span class="s">"performance question + formulary question, same scope."</span>
+}</pre>
+      <p style="margin-top: 14px;">
+        <code>needs_sql = true</code> AND <code>needs_docs = true</code>. Both agents fire with
+        the same filter scope. The synthesis prompt receives a SQL result block AND a chunks
+        block, and Claude weaves them — typical output looks like:
+        <em>"Cardiozen attainment was 40.3% [SQL], below target despite Tier-2 commercial
+        placement [FORM-CARDIOZEN-NE]."</em>
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ========== MODULES ========== -->
+<section id="modules">
+  <h2>The code, module by module</h2>
+  <p class="lede">
+    Click any module to expand it. Each card shows the file's one-job-summary, the public
+    functions, what it calls, and the most interesting code snippet.
+  </p>
+
+  <!-- ============ STREAMLIT ============ -->
+  <div class="module" id="streamlit_app">
+    <button class="module-head">
+      <span class="filename">app/streamlit_app.py</span>
+      <span class="title">Streamlit chat UI</span>
+      <span class="one-liner">Chat input + history + a provenance expander on every assistant turn.</span>
+      <span class="chevron">▶</span>
+    </button>
+    <div class="module-body">
+      <p>The entrypoint a rep actually uses. <code>streamlit run app/streamlit_app.py</code>.
+      Holds chat state in <code>st.session_state.messages</code>, calls the orchestrator on
+      each new question, renders the answer, and expands a "How this answer was assembled" box
+      with route, filters, SQL, rows, and retrieved doc list.</p>
+      <div class="api-grid">
+        <div class="api-block">
+          <h5>Calls</h5>
+          <ul>
+            <li><code>orchestrator.answer(question)</code></li>
+            <li><code>config.ROUTER_MODEL</code> / <code>GENERATION_MODEL</code> (display only)</li>
+          </ul>
+        </div>
+        <div class="api-block">
+          <h5>Renders</h5>
+          <ul>
+            <li>Answer markdown with inline citations</li>
+            <li>Route + extracted filters</li>
+            <li>SQL code block + result <code>DataFrame</code></li>
+            <li>Retrieved sources table</li>
+          </ul>
+        </div>
+      </div>
+      <pre><span class="k">with</span> st.spinner(<span class="s">"Routing → retrieving → synthesizing…"</span>):
+    result = orchestrator.<span class="n">answer</span>(question)
+<span class="n">_render_assistant_block</span>(result)
+st.session_state.messages.<span class="n">append</span>({<span class="s">"role"</span>: <span class="s">"assistant"</span>, <span class="s">"content"</span>: result})</pre>
+    </div>
+  </div>
+
+  <!-- ============ ORCHESTRATOR ============ -->
+  <div class="module" id="orchestrator">
+    <button class="module-head">
+      <span class="filename">app/orchestrator.py</span>
+      <span class="title">Orchestrator — the conductor</span>
+      <span class="one-liner">Routes → runs agents → synthesizes one cited answer.</span>
+      <span class="chevron">▶</span>
+    </button>
+    <div class="module-body">
+      <p>One public function: <code>answer(question) → CopilotResult</code>. Calls the router,
+      then conditionally runs the SQL agent and/or the RAG agent based on
+      <code>needs_sql</code> / <code>needs_docs</code>. Wraps SQL failures so the docs path can
+      still answer. Builds a single context block and asks Claude Sonnet for the final answer
+      with hard requirements: only state facts present in the context, cite every claim, no
+      preamble.</p>
+      <div class="api-grid">
+        <div class="api-block">
+          <h5>Calls</h5>
+          <ul>
+            <li><code>router.classify(question)</code></li>
+            <li><code>sql_agent.run_sql_question(question, scope=filters)</code></li>
+            <li><code>rag_agent.retrieve(question, filters=filters)</code></li>
+            <li>Sonnet (via Claude Agent SDK) for synthesis</li>
+          </ul>
+        </div>
+        <div class="api-block">
+          <h5>Returns <code>CopilotResult</code></h5>
+          <ul>
+            <li><code>answer</code> — synthesized markdown</li>
+            <li><code>route</code>, <code>reasoning</code>, <code>filters</code></li>
+            <li><code>sql</code>, <code>columns</code>, <code>rows</code>, <code>sql_error</code></li>
+            <li><code>sources</code> — <code>[{doc_id, title, score}]</code></li>
+          </ul>
+        </div>
+      </div>
+      <pre>decision = router.<span class="n">classify</span>(question)
+<span class="k">if</span> decision.needs_sql:
+    sql_result = sql_agent.<span class="n">run_sql_question</span>(question, scope=decision.filters)
+<span class="k">if</span> decision.needs_docs:
+    chunks = rag_agent.<span class="n">retrieve</span>(question, filters=decision.filters)
+context = <span class="n">_build_context_block</span>(sql_result, chunks)
+answer_text = asyncio.<span class="n">run</span>(<span class="n">_synthesize_async</span>(question, context))</pre>
+    </div>
+  </div>
+
+  <!-- ============ ROUTER ============ -->
+  <div class="module open" id="router">
+    <button class="module-head">
+      <span class="filename">app/router.py</span>
+      <span class="title">Router — the differentiator</span>
+      <span class="one-liner">Classifies the question and extracts BI metadata filters.</span>
+      <span class="chevron">▶</span>
+    </button>
+    <div class="module-body">
+      <p>The smallest, most important file. A single Haiku call with a tight system prompt that
+      defines the three routes and the canonical vocabularies (<code>KNOWN_PRODUCTS</code>,
+      <code>KNOWN_REGIONS</code>, <code>KNOWN_DOC_TYPES</code> — imported from the semantic
+      layer so the router can never invent a value the database doesn't have).</p>
+      <p>Tools are disabled (<code>allowed_tools=[]</code>) — this is a single-turn JSON
+      classifier, not an agent.</p>
+      <div class="api-grid">
+        <div class="api-block">
+          <h5>Inputs</h5>
+          <ul>
+            <li><code>question: str</code> — the rep's plain-English prompt</li>
+          </ul>
+        </div>
+        <div class="api-block">
+          <h5>Returns <code>RouterDecision</code></h5>
+          <ul>
+            <li><code>route</code> ∈ analytical / knowledge / hybrid</li>
+            <li><code>needs_sql</code>, <code>needs_docs</code> (booleans)</li>
+            <li><code>filters</code> — <code>{product, region, doc_type}</code>, any may be null</li>
+            <li><code>reasoning</code> — one-line explanation</li>
+          </ul>
+        </div>
+      </div>
+      <pre>options = <span class="n">ClaudeAgentOptions</span>(
+    model=config.ROUTER_MODEL,
+    system_prompt=SYSTEM_PROMPT,
+    allowed_tools=[],   <span class="c"># no tools — pure JSON classifier</span>
+)
+<span class="k">async for</span> msg <span class="k">in</span> <span class="n">query</span>(prompt=question, options=options):
+    <span class="k">if</span> <span class="n">isinstance</span>(msg, ResultMessage):
+        raw = msg.result
+data = <span class="n">_parse_json</span>(raw)
+<span class="c"># Defensive: drop any filter value not in canonical vocab.</span>
+clean = {k: data[<span class="s">"filters"</span>].<span class="n">get</span>(k) <span class="k">if</span> data[<span class="s">"filters"</span>].<span class="n">get</span>(k) <span class="k">in</span> VOCAB[k] <span class="k">else</span> <span class="k">None</span> ...}</pre>
+      <div class="note">
+        <strong>Why this is the differentiator.</strong> A naive RAG bot embeds the question and
+        does top-K cosine over everything. This router (a) decides which data path even applies,
+        and (b) extracts BI filters that constrain retrieval to the right scope. Same vector
+        similarity, narrower candidate set — semantic search constrained by structured metadata.
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SEMANTIC LAYER ============ -->
+  <div class="module" id="semantic_layer">
+    <button class="module-head">
+      <span class="filename">app/semantic_layer.py</span>
+      <span class="title">Semantic layer — BI definitions</span>
+      <span class="one-liner">Schema + metric formulas + disambiguation rules for Text-to-SQL.</span>
+      <span class="chevron">▶</span>
+    </button>
+    <div class="module-body">
+      <p>The SQL agent is generic Text-to-SQL — what makes it correct on <em>this</em> business
+      is the context this file renders. Update this file when BI definitions change; never the
+      agent. Also exports the canonical vocabularies the router uses.</p>
+      <div class="api-grid">
+        <div class="api-block">
+          <h5>Exports</h5>
+          <ul>
+            <li><code>get_schema_context(scope)</code> → full prompt context</li>
+            <li><code>KNOWN_PRODUCTS</code>, <code>KNOWN_REGIONS</code>, <code>KNOWN_DOC_TYPES</code></li>
+          </ul>
+        </div>
+        <div class="api-block">
+          <h5>Contents of the rendered context</h5>
+          <ul>
+            <li>Table descriptions (columns, sizes, join FKs)</li>
+            <li>Metric formulas (revenue, target attainment)</li>
+            <li>Disambiguation rules ("this quarter" → Q4 2025, etc.)</li>
+          </ul>
+        </div>
+      </div>
+      <pre><span class="c"># When user scope is known, append it as a hint.</span>
+<span class="k">def</span> <span class="n">get_schema_context</span>(scope: dict | <span class="k">None</span> = <span class="k">None</span>) -> <span class="t">str</span>:
+    parts = [TABLES, METRICS, DISAMBIGUATION]
+    <span class="k">if</span> scope:
+        hints = [<span class="s">f"- {k}: {v}"</span> <span class="k">for</span> k, v <span class="k">in</span> scope.items() <span class="k">if</span> v]
+        parts.<span class="n">append</span>(<span class="s">"Router-extracted scope:\n"</span> + <span class="s">"\n"</span>.<span class="n">join</span>(hints))
+    <span class="k">return</span> <span class="s">"\n"</span>.<span class="n">join</span>(parts)</pre>
+    </div>
+  </div>
+
+  <!-- ============ SQL AGENT ============ -->
+  <div class="module" id="sql_agent">
+    <button class="module-head">
+      <span class="filename">app/sql_agent.py</span>
+      <span class="title">SQL agent — Text-to-SQL with retry</span>
+      <span class="one-liner">Generates one read-only SELECT and executes it. Retries on error.</span>
+      <span class="chevron">▶</span>
+    </button>
+    <div class="module-body">
+      <p>Builds a system prompt from <code>get_schema_context(scope)</code>, asks Sonnet for
+      exactly one Spark SQL <code>SELECT</code>, validates it's read-only (no DDL/DML, single
+      statement), and executes via <code>databricks-sql-connector</code>. If generation,
+      validation, or execution fails, the error is fed back to the model and the agent retries
+      up to <code>SQL_MAX_ATTEMPTS</code> times.</p>
+      <div class="api-grid">
+        <div class="api-block">
+          <h5>Inputs</h5>
+          <ul>
+            <li><code>question: str</code></li>
+            <li><code>scope: dict</code> — router-extracted filters</li>
+          </ul>
+        </div>
+        <div class="api-block">
+          <h5>Returns</h5>
+          <ul>
+            <li><code>{sql, columns, rows}</code></li>
+            <li>Raises if all retries fail</li>
+          </ul>
+        </div>
+      </div>
+      <pre><span class="k">for</span> attempt <span class="k">in</span> <span class="n">range</span>(config.SQL_MAX_ATTEMPTS):
+    <span class="k">try</span>:
+        sql = <span class="n">generate_sql</span>(prompt, scope)         <span class="c"># Sonnet call</span>
+        columns, rows = <span class="n">_execute</span>(sql)              <span class="c"># SQL warehouse</span>
+        <span class="k">return</span> {<span class="s">"sql"</span>: sql, <span class="s">"columns"</span>: columns, <span class="s">"rows"</span>: rows}
+    <span class="k">except</span> Exception <span class="k">as</span> e:
+        prompt = <span class="n">_retry_prompt</span>(question, sql, e)  <span class="c"># feed error back, retry</span></pre>
+    </div>
+  </div>
+
+  <!-- ============ RAG AGENT ============ -->
+  <div class="module" id="rag_agent">
+    <button class="module-head">
+      <span class="filename">app/rag_agent.py</span>
+      <span class="title">RAG agent — filtered semantic retrieval</span>
+      <span class="one-liner">Vector Search with router-extracted metadata as filters.</span>
+      <span class="chevron">▶</span>
+    </button>
+    <div class="module-body">
+      <p>Wraps Databricks Vector Search. Lazily initializes a client on first call (so importing
+      the module makes no network call). Passes the router's <code>{product, region, doc_type}</code>
+      directly as Vector Search filters — non-null values become equality constraints,
+      multi-key filters are AND-ed. Chunks below <code>SIMILARITY_THRESHOLD</code> are dropped
+      so junk doesn't reach the synthesis prompt.</p>
+      <div class="api-grid">
+        <div class="api-block">
+          <h5>Inputs</h5>
+          <ul>
+            <li><code>question: str</code></li>
+            <li><code>filters: dict</code> — same shape as router filters</li>
+          </ul>
+        </div>
+        <div class="api-block">
+          <h5>Returns</h5>
+          <ul>
+            <li><code>list[RetrievedChunk]</code></li>
+            <li>Each chunk has its <code>title</code>, <code>doc_id</code>, <code>score</code>, full text, etc.</li>
+          </ul>
+        </div>
+      </div>
+      <pre>idx = <span class="n">_get_index</span>()           <span class="c"># lazy init</span>
+res = idx.<span class="n">similarity_search</span>(
+    query_text=question,
+    columns=[<span class="s">"chunk_id"</span>, <span class="s">"doc_id"</span>, <span class="s">"title"</span>, <span class="s">"content"</span>, ...],
+    num_results=config.TOP_K,
+    filters=<span class="n">_build_filters</span>(filters),   <span class="c"># {product, region, doc_type} → VS spec</span>
+)
+<span class="c"># Drop low-score chunks; build RetrievedChunk dataclasses.</span></pre>
+    </div>
+  </div>
+
+  <!-- ============ PDF INGEST ============ -->
+  <div class="module" id="pdf_ingest">
+    <button class="module-head">
+      <span class="filename">app/pdf_ingest.py + scripts/build_synthetic_pdfs.py</span>
+      <span class="title">PDF ingestion (offline)</span>
+      <span class="one-liner">PDFs → text → LLM-tagged corpus → Databricks Vector Search.</span>
+      <span class="chevron">▶</span>
+    </button>
+    <div class="module-body">
+      <p>Replaces the original hand-written JSON corpus with a real PDF pipeline. Runs locally,
+      writes <code>data/support_corpus.json</code>, which the Databricks ingestion cell then
+      consumes (chunks, writes Delta, triggers index sync).</p>
+      <div class="api-grid">
+        <div class="api-block">
+          <h5>Local steps</h5>
+          <ul>
+            <li><code>scripts/build_synthetic_pdfs.py</code> — reportlab renders <code>data/pdf_source.json</code> → <code>data/pdfs/*.pdf</code></li>
+            <li><code>app/pdf_ingest.py</code> — pymupdf extracts text, Haiku tags <code>{product, region, doc_type, title}</code> per PDF</li>
+            <li>Writes <code>data/support_corpus.json</code></li>
+          </ul>
+        </div>
+        <div class="api-block">
+          <h5>Databricks side</h5>
+          <ul>
+            <li>Fetches the JSON from GitHub raw URL</li>
+            <li>Line-grouped chunker (~800 chars)</li>
+            <li>Overwrites Delta table</li>
+            <li>Triggers <code>idx.sync()</code>; poll until ready</li>
+          </ul>
+        </div>
+      </div>
+      <pre><span class="c"># Per-PDF: extract + tag via Haiku, append to corpus.</span>
+text = <span class="n">_extract_text</span>(pdf)                              <span class="c"># pymupdf</span>
+tags = <span class="n">tag_pdf</span>(pdf.name, text[:METADATA_PEEK_CHARS])  <span class="c"># Haiku</span>
+docs.<span class="n">append</span>({
+    <span class="s">"doc_id"</span>: <span class="n">_doc_id_from_filename</span>(pdf.name),
+    <span class="s">"title"</span>: tags[<span class="s">"title"</span>],
+    <span class="s">"doc_type"</span>: tags[<span class="s">"doc_type"</span>],
+    <span class="s">"product"</span>: tags[<span class="s">"product"</span>] <span class="k">if</span> tags[<span class="s">"product"</span>] <span class="k">in</span> KNOWN_PRODUCTS <span class="k">else</span> <span class="k">None</span>,
+    <span class="s">"region"</span>:  tags[<span class="s">"region"</span>]  <span class="k">if</span> tags[<span class="s">"region"</span>]  <span class="k">in</span> KNOWN_REGIONS  <span class="k">else</span> <span class="k">None</span>,
+    <span class="s">"content"</span>: text,
+})</pre>
+    </div>
+  </div>
+
+</section>
+
+<!-- ========== TRACE ========== -->
+<section id="trace">
+  <h2>End-to-end trace: a hybrid question</h2>
+  <p class="lede">
+    Click through the steps below to follow one question — "<em>Cardiozen Q3 2025 attainment
+    in the Northeast — and what's the formulary situation?</em>" — from rep input to cited
+    answer. Each step shows what gets called, what goes in, what comes out.
+  </p>
+
+  <div class="trace">
+    <div class="trace-nav">
+      <div class="steps" id="trace-steps">
+        <button class="step-dot active" data-step="1">1</button>
+        <button class="step-dot" data-step="2">2</button>
+        <button class="step-dot" data-step="3">3</button>
+        <button class="step-dot" data-step="4">4</button>
+        <button class="step-dot" data-step="5">5</button>
+        <button class="step-dot" data-step="6">6</button>
+        <button class="step-dot" data-step="7">7</button>
+      </div>
+      <div class="trace-buttons">
+        <button class="secondary" id="trace-prev">← Prev</button>
+        <button id="trace-next">Next →</button>
+      </div>
+    </div>
+
+    <div class="trace-step active" data-step="1">
+      <h4><span class="step-num">1</span> Rep types the question in the chat</h4>
+      <p class="where">app/streamlit_app.py · st.chat_input → orchestrator.answer()</p>
+      <p>The Streamlit UI captures the input and calls <code>orchestrator.answer(question)</code>
+      inside a spinner. No model calls have happened yet — this is just a function dispatch.</p>
+      <div class="io-grid">
+        <div class="io-box">
+          <div class="io-label">Input</div>
+          <div class="io-content">"Cardiozen Q3 2025 attainment in the Northeast — and what's the formulary situation?"</div>
+        </div>
+        <div class="io-box">
+          <div class="io-label">Output</div>
+          <div class="io-content">— (control flow passes to orchestrator)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="trace-step" data-step="2">
+      <h4><span class="step-num">2</span> Router classifies — Haiku call</h4>
+      <p class="where">app/router.py · classify() · model: claude-haiku-4-5</p>
+      <p>Haiku reads the question against the route definitions and canonical vocabularies in
+      the system prompt, returns strict JSON. The Python validator drops anything not in the
+      vocab, then bundles into a <code>RouterDecision</code>.</p>
+      <div class="io-grid">
+        <div class="io-box">
+          <div class="io-label">Input → Haiku</div>
+          <div class="io-content">system: route definitions + KNOWN_PRODUCTS, KNOWN_REGIONS, KNOWN_DOC_TYPES
+user: "Cardiozen Q3 2025 attainment in the Northeast — and what's the formulary situation?"</div>
+        </div>
+        <div class="io-box">
+          <div class="io-label">Output</div>
+          <div class="io-content">RouterDecision(
+  route="hybrid",
+  needs_sql=True,
+  needs_docs=True,
+  filters={
+    "product": "Cardiozen",
+    "region": "Northeast",
+    "doc_type": "formulary"
+  },
+  reasoning="attainment number + formulary question, same scope"
+)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="trace-step" data-step="3">
+      <h4><span class="step-num">3</span> SQL agent — generate one SELECT</h4>
+      <p class="where">app/sql_agent.py · generate_sql() · model: claude-sonnet-4-6</p>
+      <p>The semantic layer renders the schema, metric formulas, and disambiguation rules. The
+      scope is appended as a hint. Sonnet returns a single Spark SQL <code>SELECT</code>; the
+      validator confirms it's read-only.</p>
+      <div class="io-grid">
+        <div class="io-box">
+          <div class="io-label">Input → Sonnet</div>
+          <div class="io-content">system: TABLES + METRICS + DISAMBIGUATION + scope:
+  - product: Cardiozen
+  - region: Northeast
+user: "Cardiozen Q3 2025 attainment in the Northeast — and what's the formulary situation?"</div>
+        </div>
+        <div class="io-box">
+          <div class="io-label">Generated SQL (validated)</div>
+          <div class="io-content">WITH actual AS (
+  SELECT SUM(s.revenue) AS actual_rev FROM workspace.pharma_sales.sales s
+  JOIN workspace.pharma_sales.sales_reps sr ON s.rep_id = sr.rep_id
+  JOIN workspace.pharma_sales.regions r ON sr.region_id = r.region_id
+  JOIN workspace.pharma_sales.products p ON s.product_id = p.product_id
+  WHERE LOWER(p.product_name)='cardiozen' AND LOWER(r.region_name)='northeast'
+    AND QUARTER(s.sale_date)=3 AND YEAR(s.sale_date)=2025
+),
+tgt AS (
+  SELECT SUM(t.target_revenue) AS target_rev
+  FROM workspace.pharma_sales.targets t
+  JOIN workspace.pharma_sales.sales_reps sr ON t.rep_id = sr.rep_id
+  JOIN workspace.pharma_sales.regions r ON sr.region_id = r.region_id
+  JOIN workspace.pharma_sales.products p ON t.product_id = p.product_id
+  WHERE LOWER(p.product_name)='cardiozen' AND LOWER(r.region_name)='northeast'
+    AND t.year=2025 AND t.quarter=3
+)
+SELECT actual_rev, target_rev, actual_rev/NULLIF(target_rev,0) AS attainment
+FROM actual CROSS JOIN tgt LIMIT 100</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="trace-step" data-step="4">
+      <h4><span class="step-num">4</span> SQL agent — execute against Databricks</h4>
+      <p class="where">app/sql_agent.py · _execute() · databricks-sql-connector</p>
+      <p>The connector opens a session against the Serverless SQL warehouse using
+      <code>DATABRICKS_HOST</code> / <code>TOKEN</code> / <code>HTTP_PATH</code>, executes,
+      fetches all rows.</p>
+      <div class="io-grid">
+        <div class="io-box">
+          <div class="io-label">Input</div>
+          <div class="io-content">The validated SQL from step 3</div>
+        </div>
+        <div class="io-box">
+          <div class="io-label">Output</div>
+          <div class="io-content">{
+  "sql": "&lt;the SELECT above&gt;",
+  "columns": ["actual_rev", "target_rev", "attainment"],
+  "rows": [(Decimal('14387.42'), Decimal('35717.00'), 0.4028...)]
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="trace-step" data-step="5">
+      <h4><span class="step-num">5</span> RAG agent — filtered retrieval</h4>
+      <p class="where">app/rag_agent.py · retrieve() · Databricks Vector Search</p>
+      <p>The router's filters become Vector Search's <code>filters</code> argument. Only
+      chunks where <code>product=Cardiozen AND region=Northeast AND doc_type=formulary</code>
+      are eligible — and in this corpus, only one doc matches all three.</p>
+      <div class="io-grid">
+        <div class="io-box">
+          <div class="io-label">Input</div>
+          <div class="io-content">query_text: "Cardiozen Q3 2025 attainment in the Northeast — and what's the formulary situation?"
+filters: {
+  "product": "Cardiozen",
+  "region": "Northeast",
+  "doc_type": "formulary"
+}
+num_results: 5
+threshold: 0.3</div>
+        </div>
+        <div class="io-box">
+          <div class="io-label">Output (after threshold filter)</div>
+          <div class="io-content">[
+  RetrievedChunk(
+    doc_id="CARDIOZEN-NORTHEAST-FORMULARY-STATUS",
+    title="Cardiozen Northeast Regional Formulary Status",
+    score=0.78,
+    content="Cardiozen is on the preferred tier (Tier 2) for the three largest commercial payers..."
+  ),
+  RetrievedChunk(..., score=0.62)  # second chunk of same doc
+]</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="trace-step" data-step="6">
+      <h4><span class="step-num">6</span> Synthesis — Sonnet writes the final answer</h4>
+      <p class="where">app/orchestrator.py · _synthesize_async() · model: claude-sonnet-4-6</p>
+      <p>The context block contains both the SQL result and the retrieved chunks (with their
+      <code>doc_id</code> labels). The system prompt forbids unsupported claims and requires
+      inline citations: <code>[SQL]</code> for numbers, <code>[&lt;doc_id&gt;]</code> for doc
+      facts.</p>
+      <div class="io-grid">
+        <div class="io-box">
+          <div class="io-label">Input → Sonnet</div>
+          <div class="io-content">system: cite every claim; only state facts in context
+user: REP QUESTION + CONTEXT
+       === SQL RESULT ===
+       (query, columns, rows)
+       === SUPPORT DOCUMENTS ===
+       [CARDIOZEN-NORTHEAST-FORMULARY-STATUS] (chunks)</div>
+        </div>
+        <div class="io-box">
+          <div class="io-label">Output (markdown with citations)</div>
+          <div class="io-content">"Cardiozen Q3 2025 attainment in the Northeast came in at 40.3%
+($14,387 actual / $35,717 target) [SQL]. Despite the gap,
+Cardiozen sits on Tier 2 (preferred) with the three largest
+commercial payers in the region [CARDIOZEN-NORTHEAST-FORMULARY-STATUS],
+suggesting the underperformance isn't formulary-driven. UnitedHealthcare
+and Aetna require step therapy through statins
+[CARDIOZEN-NORTHEAST-FORMULARY-STATUS], which may be slowing
+new starts despite favorable tier placement."</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="trace-step" data-step="7">
+      <h4><span class="step-num">7</span> Result rendered in the UI</h4>
+      <p class="where">app/streamlit_app.py · _render_assistant_block()</p>
+      <p>The <code>CopilotResult</code> goes back to Streamlit. The answer is rendered as
+      markdown; the "How this answer was assembled" expander shows the route, extracted
+      filters, the SQL + result DataFrame, and the retrieved source table.</p>
+      <div class="io-grid">
+        <div class="io-box">
+          <div class="io-label">Rendered</div>
+          <div class="io-content">Answer markdown (with [SQL] / [doc_id] citations)
++ Expander showing:
+  - Route: hybrid
+  - Filters: {product, region, doc_type}
+  - SQL code block
+  - Result table (1 row)
+  - Source table (2 chunks of CARDIOZEN-NORTHEAST-FORMULARY-STATUS)</div>
+        </div>
+        <div class="io-box">
+          <div class="io-label">Chat history</div>
+          <div class="io-content">The CopilotResult is appended to st.session_state.messages
+so future reruns of the script re-render the entire history.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== DATA SHAPES ========== -->
+<section id="shapes">
+  <h2>Data shapes that flow between components</h2>
+  <p class="lede">
+    Three small dataclasses carry everything. Each one is the contract between two layers.
+  </p>
+
+  <div class="shape-grid">
+    <div class="shape-card">
+      <h4>RouterDecision</h4>
+      <p class="from">app/router.py — output of classify()</p>
+      <pre><span class="t">@dataclass</span>
+<span class="k">class</span> <span class="n">RouterDecision</span>:
+    route: <span class="t">Literal</span>[<span class="s">"analytical"</span>, <span class="s">"knowledge"</span>, <span class="s">"hybrid"</span>]
+    needs_sql: <span class="t">bool</span>
+    needs_docs: <span class="t">bool</span>
+    filters: <span class="t">dict</span>   <span class="c"># {product, region, doc_type}</span>
+    reasoning: <span class="t">str</span></pre>
+    </div>
+
+    <div class="shape-card">
+      <h4>RetrievedChunk</h4>
+      <p class="from">app/rag_agent.py — one per retrieved chunk</p>
+      <pre><span class="t">@dataclass</span>
+<span class="k">class</span> <span class="n">RetrievedChunk</span>:
+    chunk_id: <span class="t">str</span>
+    doc_id: <span class="t">str</span>
+    title: <span class="t">str</span>
+    doc_type: <span class="t">str</span>
+    product: <span class="t">str</span> | <span class="k">None</span>
+    region:  <span class="t">str</span> | <span class="k">None</span>
+    content: <span class="t">str</span>
+    score:   <span class="t">float</span>   <span class="c"># cosine similarity</span></pre>
+    </div>
+
+    <div class="shape-card">
+      <h4>CopilotResult</h4>
+      <p class="from">app/orchestrator.py — return value of answer()</p>
+      <pre><span class="t">@dataclass</span>
+<span class="k">class</span> <span class="n">CopilotResult</span>:
+    question: <span class="t">str</span>
+    route: <span class="t">str</span>
+    reasoning: <span class="t">str</span>
+    filters: <span class="t">dict</span>
+    answer: <span class="t">str</span>          <span class="c"># synthesized markdown</span>
+    sql: <span class="t">str</span> | <span class="k">None</span>
+    sql_error: <span class="t">str</span> | <span class="k">None</span>
+    columns: <span class="t">list</span>[<span class="t">str</span>]
+    rows: <span class="t">list</span>[<span class="t">tuple</span>]
+    sources: <span class="t">list</span>[<span class="t">dict</span>]    <span class="c"># [{doc_id, title, score}]</span></pre>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>If you only remember three things</h2>
+  <p class="lede" style="max-width: 760px;">
+    1. <strong>The router is the differentiator.</strong> It picks the route AND the filters that
+    narrow retrieval. Same vector similarity, narrower set.
+    <br><br>
+    2. <strong>The semantic layer is the single source of business truth.</strong> Update
+    <code>semantic_layer.py</code> — never the SQL agent — when BI definitions change.
+    <br><br>
+    3. <strong>The orchestrator never trusts the model with raw facts.</strong> It builds a
+    context block with the SQL result and the retrieved chunks (each labeled with its
+    <code>doc_id</code>), then forces Sonnet to cite every claim. If a fact isn't in the
+    context, Sonnet can't say it without citing nothing.
+  </p>
+</section>
+
+</main>
+
+<script>
+  // ========== TAB SWITCHING (routes) ==========
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const route = btn.dataset.route;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.route === route));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === route));
+    });
+  });
+
+  // ========== MODULE ACCORDION ==========
+  document.querySelectorAll('.module-head').forEach(head => {
+    head.addEventListener('click', () => {
+      head.parentElement.classList.toggle('open');
+    });
+  });
+
+  // ========== DIAGRAM NODE CLICKS ==========
+  document.querySelectorAll('.diagram .node[data-jump]').forEach(node => {
+    node.addEventListener('click', () => {
+      const target = node.dataset.jump;
+      const el = document.getElementById(target);
+      if (!el) return;
+      el.classList.add('open');
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  // ========== TRACE STEPPER ==========
+  const stepDots = document.querySelectorAll('.step-dot');
+  const steps = document.querySelectorAll('.trace-step');
+  const prevBtn = document.getElementById('trace-prev');
+  const nextBtn = document.getElementById('trace-next');
+  let current = 1;
+  const total = steps.length;
+
+  function setStep(n) {
+    current = Math.max(1, Math.min(total, n));
+    stepDots.forEach(d => {
+      const i = parseInt(d.dataset.step);
+      d.classList.toggle('active', i === current);
+      d.classList.toggle('done', i < current);
+    });
+    steps.forEach(s => s.classList.toggle('active', parseInt(s.dataset.step) === current));
+    prevBtn.disabled = current === 1;
+    nextBtn.disabled = current === total;
+  }
+  stepDots.forEach(d => d.addEventListener('click', () => setStep(parseInt(d.dataset.step))));
+  prevBtn.addEventListener('click', () => setStep(current - 1));
+  nextBtn.addEventListener('click', () => setStep(current + 1));
+  setStep(1);
+
+  // ========== ACTIVE NAV HIGHLIGHTING ON SCROLL ==========
+  const sections = ['architecture', 'routes', 'modules', 'trace', 'shapes'];
+  const navLinks = document.querySelectorAll('.topbar nav a');
+  function onScroll() {
+    let active = sections[0];
+    for (const id of sections) {
+      const el = document.getElementById(id);
+      if (!el) continue;
+      const top = el.getBoundingClientRect().top;
+      if (top < 140) active = id;
+    }
+    navLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + active));
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+</script>
+
+</body>
+</html>
