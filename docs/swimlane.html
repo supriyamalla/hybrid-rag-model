@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pharma Rep Copilot — Swimlane &amp; Dependencies</title>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --border: #e4e6ed;
+      --text: #1f2330;
+      --muted: #5b6275;
+      --primary: #6366f1;
+      --primary-soft: #eef0ff;
+      --code-bg: #1e2230;
+      --code-text: #e8eaf2;
+      --user: #0ea5e9;
+      --ui: #6366f1;
+      --orch: #8b5cf6;
+      --router: #f59e0b;
+      --sql: #3b82f6;
+      --rag: #10b981;
+      --claude: #ec4899;
+      --dbx: #ef4444;
+      --entry: #22c55e;
+      --exit: #ef4444;
+      --shadow: 0 1px 3px rgba(15, 23, 42, .06), 0 1px 2px rgba(15, 23, 42, .04);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+    code, pre, .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace; font-size: 13px; }
+    pre {
+      background: var(--code-bg); color: var(--code-text);
+      padding: 12px 14px; border-radius: 7px; overflow-x: auto; line-height: 1.55; margin: 0;
+      font-size: 12.5px;
+    }
+    a { color: var(--primary); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ---------- TOPBAR ---------- */
+    .topbar {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(255,255,255,.85); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .topbar .brand { font-weight: 700; letter-spacing: -0.02em; }
+    .topbar .brand .pill {
+      display: inline-block; font-size: 11px; padding: 2px 8px;
+      background: var(--primary-soft); color: var(--primary);
+      border-radius: 999px; margin-left: 6px; font-weight: 600;
+    }
+    .topbar nav a {
+      margin-left: 22px; color: var(--muted); font-size: 14px; font-weight: 500;
+    }
+    .topbar nav a:hover { color: var(--text); text-decoration: none; }
+    .topbar nav a.active { color: var(--primary); }
+
+    main { max-width: 1280px; margin: 0 auto; padding: 40px 24px 80px; }
+    section { margin-bottom: 64px; scroll-margin-top: 80px; }
+    section h2 { font-size: 26px; letter-spacing: -0.02em; margin: 0 0 6px; }
+    section .lede { color: var(--muted); margin: 0 0 22px; max-width: 760px; font-size: 15px; }
+
+    .hero { padding: 48px 0 28px; }
+    .hero h1 { font-size: 36px; margin: 0 0 10px; letter-spacing: -0.025em; line-height: 1.15; }
+    .hero p { color: var(--muted); font-size: 16.5px; max-width: 760px; margin: 0; }
+    .hero .actions { margin-top: 18px; display: flex; gap: 10px; }
+    .hero .btn {
+      padding: 8px 14px; background: var(--card); border: 1px solid var(--border);
+      border-radius: 8px; font-size: 14px; font-weight: 500;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+
+    /* ---------- ENTRY / EXIT GRID ---------- */
+    .point-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px;
+    }
+    .point-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 16px 18px; box-shadow: var(--shadow);
+      border-left: 4px solid var(--entry);
+    }
+    .point-card.exit { border-left-color: var(--exit); }
+    .point-card h4 { margin: 0 0 4px; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+    .point-card .icon { font-size: 14px; }
+    .point-card .icon.entry { color: var(--entry); }
+    .point-card .icon.exit { color: var(--exit); }
+    .point-card p { color: var(--muted); font-size: 13.5px; margin: 4px 0 8px; }
+    .point-card code, .point-card pre {
+      font-size: 12px; background: #f3f4f8; color: var(--text);
+      padding: 6px 9px; border-radius: 5px; display: block; margin-top: 6px;
+      white-space: pre-wrap; word-break: break-all;
+    }
+    .point-card .pill {
+      display: inline-block; font-size: 10.5px; padding: 2px 7px; border-radius: 999px;
+      background: var(--primary-soft); color: var(--primary); font-weight: 600;
+      margin-left: 6px;
+    }
+
+    /* ---------- SWIMLANE WRAPPER ---------- */
+    .swimlane-wrap {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; box-shadow: var(--shadow);
+      padding: 24px;
+      overflow-x: auto;
+    }
+    svg.swimlane {
+      display: block; min-width: 1180px; width: 100%; height: auto;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+    .swimlane .lane-header rect {
+      stroke-width: 1.5; rx: 8; ry: 8;
+    }
+    .swimlane .lane-header text {
+      font-size: 12px; font-weight: 600; fill: #ffffff;
+    }
+    .swimlane .lifeline {
+      stroke: #c7cad8; stroke-width: 1; stroke-dasharray: 4 4;
+    }
+    .swimlane .activity {
+      opacity: 0.16; stroke-width: 0;
+    }
+    .swimlane .msg-line {
+      stroke-width: 1.5; fill: none;
+    }
+    .swimlane .msg-head { stroke-width: 0; }
+    .swimlane .msg-label {
+      font-size: 11.5px; fill: var(--text); font-weight: 500;
+    }
+    .swimlane .msg-sub {
+      font-size: 10.5px; fill: var(--muted);
+    }
+    .swimlane .step-num {
+      font-size: 10px; fill: #fff; font-weight: 700;
+      text-anchor: middle; dominant-baseline: central;
+    }
+    .swimlane .step-num-circle {
+      stroke-width: 0;
+    }
+    .swimlane .entry-dot { fill: var(--entry); }
+    .swimlane .exit-dot { fill: var(--exit); }
+    .swimlane .entry-label, .swimlane .exit-label {
+      font-size: 11px; font-weight: 600;
+    }
+    .swimlane .entry-label { fill: var(--entry); }
+    .swimlane .exit-label { fill: var(--exit); }
+
+    .legend {
+      margin-top: 20px;
+      display: flex; gap: 22px; flex-wrap: wrap;
+      font-size: 12.5px; color: var(--muted);
+    }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .legend .swatch {
+      width: 12px; height: 12px; border-radius: 3px;
+    }
+
+    /* ---------- DEPENDENCY GRAPH ---------- */
+    .deps-wrap {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; box-shadow: var(--shadow); padding: 24px;
+      overflow-x: auto;
+    }
+    svg.deps {
+      display: block; min-width: 900px; width: 100%; height: auto;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+    .deps .node rect { stroke-width: 1.5; rx: 7; ry: 7; }
+    .deps .node text { font-size: 12px; font-weight: 600; fill: #ffffff; text-anchor: middle; dominant-baseline: central; }
+    .deps .layer-label { font-size: 11px; fill: var(--muted); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+    .deps .edge { stroke: #9aa1b3; stroke-width: 1.2; fill: none; opacity: 0.65; }
+    .deps .edge-head { fill: #9aa1b3; opacity: 0.65; }
+
+    /* ---------- EXTERNAL DEPS TABLE ---------- */
+    table.ext-deps {
+      width: 100%; border-collapse: collapse; background: var(--card);
+      border-radius: 10px; overflow: hidden; box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+    }
+    table.ext-deps th, table.ext-deps td {
+      padding: 12px 14px; text-align: left; font-size: 13.5px;
+      border-bottom: 1px solid var(--border);
+    }
+    table.ext-deps th {
+      background: #f3f4f8; font-weight: 600; color: var(--muted);
+      font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    table.ext-deps tr:last-child td { border-bottom: none; }
+    table.ext-deps code { font-size: 12.5px; }
+    table.ext-deps .tag {
+      display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px;
+      font-weight: 600; background: #eef0ff; color: var(--primary);
+    }
+    table.ext-deps .tag.svc { background: #fee2e2; color: var(--dbx); }
+    table.ext-deps .tag.ai { background: #fce7f3; color: var(--claude); }
+
+    .note {
+      background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px;
+      padding: 12px 16px; font-size: 13.5px; color: #78350f; margin: 14px 0;
+    }
+    .note strong { color: #92400e; }
+
+    @media (max-width: 720px) {
+      .topbar nav { display: none; }
+      .hero h1 { font-size: 28px; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">Pharma Rep Copilot <span class="pill">swimlane &amp; deps</span></div>
+  <nav>
+    <a href="#entry">Entry</a>
+    <a href="#flow">Swimlane</a>
+    <a href="#deps">Dependencies</a>
+    <a href="#exit">Exit</a>
+    <a href="architecture.html">← Architecture view</a>
+  </nav>
+</header>
+
+<main>
+
+<!-- ========== HERO ========== -->
+<section class="hero">
+  <h1>Code flow, dependencies, and exit points</h1>
+  <p>
+    This page is the engineering reference. Where does execution start, how does it
+    cross between modules, what does each module depend on, and where does it end?
+    The swimlane below is a sequence-diagram view of a hybrid question — every call
+    crossing every actor, in order.
+  </p>
+  <div class="actions">
+    <a class="btn" href="architecture.html">Architecture / explanatory view →</a>
+    <a class="btn" href="https://github.com/supriyamalla/hybrid-rag-model" target="_blank" rel="noopener">GitHub →</a>
+  </div>
+</section>
+
+<!-- ========== ENTRY POINTS ========== -->
+<section id="entry">
+  <h2>Entry points</h2>
+  <p class="lede">
+    Every way code execution starts. Each card lists the command, the file that runs,
+    and what it produces. The Streamlit app is the user-facing path; the others are
+    standalone demos and offline pipelines.
+  </p>
+
+  <div class="point-grid">
+    <div class="point-card">
+      <h4><span class="icon entry">●</span> Live chat app <span class="pill">primary</span></h4>
+      <p>The rep-facing UI. Calls the orchestrator on every chat input.</p>
+      <pre>streamlit run app/streamlit_app.py</pre>
+      <p style="margin-top: 8px; font-size: 12.5px;">
+        <strong>Entry:</strong> <code>streamlit_app.py:main()</code><br>
+        <strong>Produces:</strong> cited answer + provenance expander in browser
+      </p>
+    </div>
+
+    <div class="point-card">
+      <h4><span class="icon entry">●</span> Orchestrator demo</h4>
+      <p>Runs all three sample questions through the full pipeline. Best terminal sanity check.</p>
+      <pre>python -m app.orchestrator</pre>
+      <p style="margin-top: 8px; font-size: 12.5px;">
+        <strong>Entry:</strong> <code>orchestrator.py:_demo()</code><br>
+        <strong>Produces:</strong> stdout — route, SQL, sources, answer per question
+      </p>
+    </div>
+
+    <div class="point-card">
+      <h4><span class="icon entry">●</span> Router smoke test</h4>
+      <p>Cheapest sanity check — no Databricks required, only Claude auth.</p>
+      <pre>python -m app.router</pre>
+      <p style="margin-top: 8px; font-size: 12.5px;">
+        <strong>Entry:</strong> <code>router.py:_demo()</code><br>
+        <strong>Produces:</strong> 3 sample classifications with extracted filters
+      </p>
+    </div>
+
+    <div class="point-card">
+      <h4><span class="icon entry">●</span> SQL agent demo</h4>
+      <p>Generates &amp; executes one SELECT against the warehouse. Tests Databricks SQL auth.</p>
+      <pre>python -m app.sql_agent</pre>
+      <p style="margin-top: 8px; font-size: 12.5px;">
+        <strong>Entry:</strong> <code>sql_agent.py:_demo()</code><br>
+        <strong>Produces:</strong> SQL + rows for "revenue by product, NE"
+      </p>
+    </div>
+
+    <div class="point-card">
+      <h4><span class="icon entry">●</span> RAG agent demo</h4>
+      <p>Three filter cases against Vector Search. Tests the filter-narrowing behavior.</p>
+      <pre>python -m app.rag_agent</pre>
+      <p style="margin-top: 8px; font-size: 12.5px;">
+        <strong>Entry:</strong> <code>rag_agent.py:_demo()</code><br>
+        <strong>Produces:</strong> top-K chunks (unfiltered vs product vs region)
+      </p>
+    </div>
+
+    <div class="point-card">
+      <h4><span class="icon entry">●</span> PDF ingestion</h4>
+      <p>Local: read PDFs → extract text → tag with Haiku → write JSON.</p>
+      <pre>python -m app.pdf_ingest</pre>
+      <p style="margin-top: 8px; font-size: 12.5px;">
+        <strong>Entry:</strong> <code>pdf_ingest.py:main()</code><br>
+        <strong>Produces:</strong> <code>data/support_corpus.json</code>
+      </p>
+    </div>
+
+    <div class="point-card">
+      <h4><span class="icon entry">●</span> PDF generator</h4>
+      <p>Render <code>data/pdf_source.json</code> into formatted PDFs via reportlab.</p>
+      <pre>python -m scripts.build_synthetic_pdfs</pre>
+      <p style="margin-top: 8px; font-size: 12.5px;">
+        <strong>Entry:</strong> <code>build_synthetic_pdfs.py:main()</code><br>
+        <strong>Produces:</strong> <code>data/pdfs/*.pdf</code>
+      </p>
+    </div>
+
+    <div class="point-card">
+      <h4><span class="icon entry">●</span> Databricks ingestion</h4>
+      <p>Notebook cell. Fetches corpus from GitHub raw URL → Delta → triggers VS sync.</p>
+      <pre># In a Databricks notebook
+%pip install databricks-vectorsearch
+# then paste the ingestion cell</pre>
+      <p style="margin-top: 8px; font-size: 12.5px;">
+        <strong>Entry:</strong> notebook cell (see <code>README.md</code> / <code>issues.md</code>)<br>
+        <strong>Produces:</strong> Delta table + populated Vector Search index
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ========== SWIMLANE ========== -->
+<section id="flow">
+  <h2>Swimlane — end-to-end hybrid question</h2>
+  <p class="lede">
+    Sequence-diagram view. Each column is an actor; each horizontal arrow is a function
+    call or service request, in time order top-to-bottom. The activity bars highlight
+    when an actor is on the critical path. This shows the <em>hybrid</em> flow because it
+    exercises every component — analytical-only or knowledge-only flows are subsets of
+    this one (skip the RAG block or the SQL block respectively).
+  </p>
+
+  <div class="swimlane-wrap">
+    <svg class="swimlane" viewBox="0 0 1200 1280" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="sw-arrow" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z"/>
+        </marker>
+      </defs>
+
+      <!-- Lane headers -->
+      <g class="lane-header">
+        <g><rect x="20"   y="20" width="120" height="46" fill="#0ea5e9"/><text x="80"   y="48" text-anchor="middle">User (rep)</text></g>
+        <g><rect x="160"  y="20" width="120" height="46" fill="#6366f1"/><text x="220"  y="42" text-anchor="middle">Streamlit UI</text><text x="220" y="58" text-anchor="middle" font-size="10" opacity="0.8">streamlit_app.py</text></g>
+        <g><rect x="300"  y="20" width="120" height="46" fill="#8b5cf6"/><text x="360"  y="42" text-anchor="middle">Orchestrator</text><text x="360" y="58" text-anchor="middle" font-size="10" opacity="0.8">orchestrator.py</text></g>
+        <g><rect x="440"  y="20" width="120" height="46" fill="#f59e0b"/><text x="500"  y="42" text-anchor="middle">Router</text><text x="500" y="58" text-anchor="middle" font-size="10" opacity="0.8">router.py</text></g>
+        <g><rect x="580"  y="20" width="120" height="46" fill="#3b82f6"/><text x="640"  y="42" text-anchor="middle">SQL Agent</text><text x="640" y="58" text-anchor="middle" font-size="10" opacity="0.8">sql_agent.py</text></g>
+        <g><rect x="720"  y="20" width="120" height="46" fill="#10b981"/><text x="780"  y="42" text-anchor="middle">RAG Agent</text><text x="780" y="58" text-anchor="middle" font-size="10" opacity="0.8">rag_agent.py</text></g>
+        <g><rect x="860"  y="20" width="120" height="46" fill="#ec4899"/><text x="920"  y="42" text-anchor="middle">Claude API</text><text x="920" y="58" text-anchor="middle" font-size="10" opacity="0.8">Haiku · Sonnet</text></g>
+        <g><rect x="1000" y="20" width="120" height="46" fill="#ef4444"/><text x="1060" y="42" text-anchor="middle">Databricks</text><text x="1060" y="58" text-anchor="middle" font-size="10" opacity="0.8">SQL · Vector Search</text></g>
+      </g>
+
+      <!-- Lifelines -->
+      <line class="lifeline" x1="80"   y1="70" x2="80"   y2="1250"/>
+      <line class="lifeline" x1="220"  y1="70" x2="220"  y2="1250"/>
+      <line class="lifeline" x1="360"  y1="70" x2="360"  y2="1250"/>
+      <line class="lifeline" x1="500"  y1="70" x2="500"  y2="1250"/>
+      <line class="lifeline" x1="640"  y1="70" x2="640"  y2="1250"/>
+      <line class="lifeline" x1="780"  y1="70" x2="780"  y2="1250"/>
+      <line class="lifeline" x1="920"  y1="70" x2="920"  y2="1250"/>
+      <line class="lifeline" x1="1060" y1="70" x2="1060" y2="1250"/>
+
+      <!-- Entry point -->
+      <circle class="entry-dot" cx="80" cy="105" r="8"/>
+      <text class="entry-label" x="22" y="109">ENTRY</text>
+
+      <!-- Activity bars (show when each actor is on critical path) -->
+      <rect class="activity" x="74"   y="105"  width="12" height="1145" fill="#0ea5e9"/>
+      <rect class="activity" x="214"  y="140"  width="12" height="1080" fill="#6366f1"/>
+      <rect class="activity" x="354"  y="180"  width="12" height="980"  fill="#8b5cf6"/>
+      <rect class="activity" x="494"  y="220"  width="12" height="170"  fill="#f59e0b"/>
+      <rect class="activity" x="634"  y="430"  width="12" height="290"  fill="#3b82f6"/>
+      <rect class="activity" x="774"  y="760"  width="12" height="170"  fill="#10b981"/>
+
+      <!-- ============ MESSAGES (top → bottom = time) ============ -->
+
+      <!-- 1: User → UI -->
+      <g>
+        <circle class="step-num-circle" cx="148" cy="125" r="10" fill="#0ea5e9"/>
+        <text class="step-num" x="148" y="125">1</text>
+        <line class="msg-line" x1="92" y1="140" x2="216" y2="140" stroke="#0ea5e9" marker-end="url(#sw-arrow)"/>
+        <path class="msg-head" d="M0,0" fill="#0ea5e9"/>
+        <text class="msg-label" x="160" y="133">types question into st.chat_input</text>
+      </g>
+
+      <!-- 2: UI → Orchestrator -->
+      <g>
+        <circle class="step-num-circle" cx="288" cy="165" r="10" fill="#6366f1"/>
+        <text class="step-num" x="288" y="165">2</text>
+        <line class="msg-line" x1="232" y1="180" x2="356" y2="180" stroke="#6366f1" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="300" y="173">orchestrator.answer(question)</text>
+      </g>
+
+      <!-- 3: Orchestrator → Router -->
+      <g>
+        <circle class="step-num-circle" cx="428" cy="205" r="10" fill="#8b5cf6"/>
+        <text class="step-num" x="428" y="205">3</text>
+        <line class="msg-line" x1="372" y1="220" x2="496" y2="220" stroke="#8b5cf6" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="440" y="213">router.classify(question)</text>
+      </g>
+
+      <!-- 4: Router → Claude (Haiku) -->
+      <g>
+        <circle class="step-num-circle" cx="710" cy="260" r="10" fill="#f59e0b"/>
+        <text class="step-num" x="710" y="260">4</text>
+        <line class="msg-line" x1="512" y1="275" x2="916" y2="275" stroke="#f59e0b" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="710" y="268" text-anchor="middle">Haiku · system_prompt + question</text>
+        <text class="msg-sub" x="710" y="290" text-anchor="middle">allowed_tools=[] · no tools, JSON only</text>
+      </g>
+
+      <!-- 5: Claude → Router (response) -->
+      <g>
+        <circle class="step-num-circle" cx="710" cy="335" r="10" fill="#ec4899"/>
+        <text class="step-num" x="710" y="335">5</text>
+        <line class="msg-line" x1="916" y1="350" x2="512" y2="350" stroke="#ec4899" stroke-dasharray="5 3" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="710" y="343" text-anchor="middle">JSON: {route, filters, reasoning}</text>
+      </g>
+
+      <!-- 6: Router → Orchestrator -->
+      <g>
+        <circle class="step-num-circle" cx="428" cy="385" r="10" fill="#f59e0b"/>
+        <text class="step-num" x="428" y="385">6</text>
+        <line class="msg-line" x1="496" y1="400" x2="372" y2="400" stroke="#f59e0b" stroke-dasharray="5 3" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="440" y="393">RouterDecision (vocab-validated)</text>
+      </g>
+
+      <!-- 7: Orchestrator → SQL Agent (needs_sql=True branch) -->
+      <g>
+        <circle class="step-num-circle" cx="500" cy="430" r="10" fill="#8b5cf6"/>
+        <text class="step-num" x="500" y="430">7</text>
+        <line class="msg-line" x1="372" y1="445" x2="636" y2="445" stroke="#8b5cf6" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="500" y="438" text-anchor="middle">if decision.needs_sql → sql_agent.run_sql_question(q, scope=filters)</text>
+      </g>
+
+      <!-- 8: SQL Agent → Claude (Sonnet for SQL gen) -->
+      <g>
+        <circle class="step-num-circle" cx="780" cy="475" r="10" fill="#3b82f6"/>
+        <text class="step-num" x="780" y="475">8</text>
+        <line class="msg-line" x1="652" y1="490" x2="916" y2="490" stroke="#3b82f6" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="780" y="483" text-anchor="middle">Sonnet · schema_context + question</text>
+        <text class="msg-sub" x="780" y="505" text-anchor="middle">semantic_layer.get_schema_context(scope)</text>
+      </g>
+
+      <!-- 9: Claude → SQL Agent (SQL returned) -->
+      <g>
+        <circle class="step-num-circle" cx="780" cy="525" r="10" fill="#ec4899"/>
+        <text class="step-num" x="780" y="525">9</text>
+        <line class="msg-line" x1="916" y1="540" x2="652" y2="540" stroke="#ec4899" stroke-dasharray="5 3" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="780" y="533" text-anchor="middle">single SELECT statement</text>
+      </g>
+
+      <!-- 10: SQL Agent self-call: validate -->
+      <g>
+        <circle class="step-num-circle" cx="668" cy="575" r="10" fill="#3b82f6"/>
+        <text class="step-num" x="668" y="575">10</text>
+        <path class="msg-line" d="M652,585 Q700,575 700,595 Q700,615 652,605" stroke="#3b82f6" fill="none" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="710" y="595">_validate(sql) — reject DDL/DML/multi-stmt</text>
+      </g>
+
+      <!-- 11: SQL Agent → Databricks (execute) -->
+      <g>
+        <circle class="step-num-circle" cx="850" cy="625" r="10" fill="#3b82f6"/>
+        <text class="step-num" x="850" y="625">11</text>
+        <line class="msg-line" x1="652" y1="640" x2="1056" y2="640" stroke="#3b82f6" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="850" y="633" text-anchor="middle">execute via databricks-sql-connector</text>
+        <text class="msg-sub" x="850" y="655" text-anchor="middle">workspace.pharma_sales</text>
+      </g>
+
+      <!-- 12: Databricks → SQL Agent (rows) -->
+      <g>
+        <circle class="step-num-circle" cx="850" cy="675" r="10" fill="#ef4444"/>
+        <text class="step-num" x="850" y="675">12</text>
+        <line class="msg-line" x1="1056" y1="690" x2="652" y2="690" stroke="#ef4444" stroke-dasharray="5 3" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="850" y="683" text-anchor="middle">columns + rows</text>
+      </g>
+
+      <!-- 13: SQL Agent → Orchestrator -->
+      <g>
+        <circle class="step-num-circle" cx="500" cy="720" r="10" fill="#3b82f6"/>
+        <text class="step-num" x="500" y="720">13</text>
+        <line class="msg-line" x1="636" y1="735" x2="372" y2="735" stroke="#3b82f6" stroke-dasharray="5 3" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="500" y="728" text-anchor="middle">{sql, columns, rows}</text>
+      </g>
+
+      <!-- 14: Orchestrator → RAG Agent (needs_docs=True branch) -->
+      <g>
+        <circle class="step-num-circle" cx="570" cy="765" r="10" fill="#8b5cf6"/>
+        <text class="step-num" x="570" y="765">14</text>
+        <line class="msg-line" x1="372" y1="780" x2="776" y2="780" stroke="#8b5cf6" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="570" y="773" text-anchor="middle">if decision.needs_docs → rag_agent.retrieve(q, filters=filters)</text>
+      </g>
+
+      <!-- 15: RAG Agent → Databricks (Vector Search) -->
+      <g>
+        <circle class="step-num-circle" cx="920" cy="810" r="10" fill="#10b981"/>
+        <text class="step-num" x="920" y="810">15</text>
+        <line class="msg-line" x1="796" y1="825" x2="1056" y2="825" stroke="#10b981" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="920" y="818" text-anchor="middle">similarity_search(query, filters, top_k)</text>
+        <text class="msg-sub" x="920" y="840" text-anchor="middle">Vector Search · managed embeddings</text>
+      </g>
+
+      <!-- 16: Databricks → RAG Agent (chunks) -->
+      <g>
+        <circle class="step-num-circle" cx="920" cy="860" r="10" fill="#ef4444"/>
+        <text class="step-num" x="920" y="860">16</text>
+        <line class="msg-line" x1="1056" y1="875" x2="796" y2="875" stroke="#ef4444" stroke-dasharray="5 3" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="920" y="868" text-anchor="middle">data_array + scores</text>
+      </g>
+
+      <!-- 17: RAG Agent → Orchestrator -->
+      <g>
+        <circle class="step-num-circle" cx="570" cy="905" r="10" fill="#10b981"/>
+        <text class="step-num" x="570" y="905">17</text>
+        <line class="msg-line" x1="776" y1="920" x2="372" y2="920" stroke="#10b981" stroke-dasharray="5 3" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="570" y="913" text-anchor="middle">list[RetrievedChunk] (post-threshold)</text>
+      </g>
+
+      <!-- 18: Orchestrator self-call: build context -->
+      <g>
+        <circle class="step-num-circle" cx="388" cy="955" r="10" fill="#8b5cf6"/>
+        <text class="step-num" x="388" y="955">18</text>
+        <path class="msg-line" d="M372,965 Q420,955 420,975 Q420,995 372,985" stroke="#8b5cf6" fill="none" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="432" y="977">_build_context_block(sql_result, chunks)</text>
+      </g>
+
+      <!-- 19: Orchestrator → Claude (Sonnet for synthesis) -->
+      <g>
+        <circle class="step-num-circle" cx="640" cy="1015" r="10" fill="#8b5cf6"/>
+        <text class="step-num" x="640" y="1015">19</text>
+        <line class="msg-line" x1="372" y1="1030" x2="916" y2="1030" stroke="#8b5cf6" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="640" y="1023" text-anchor="middle">Sonnet · system: forbid unsupported claims, require citations</text>
+        <text class="msg-sub" x="640" y="1045" text-anchor="middle">user: REP QUESTION + CONTEXT (SQL block + docs block)</text>
+      </g>
+
+      <!-- 20: Claude → Orchestrator -->
+      <g>
+        <circle class="step-num-circle" cx="640" cy="1075" r="10" fill="#ec4899"/>
+        <text class="step-num" x="640" y="1075">20</text>
+        <line class="msg-line" x1="916" y1="1090" x2="372" y2="1090" stroke="#ec4899" stroke-dasharray="5 3" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="640" y="1083" text-anchor="middle">markdown answer with inline [SQL] / [doc_id] citations</text>
+      </g>
+
+      <!-- 21: Orchestrator → UI -->
+      <g>
+        <circle class="step-num-circle" cx="290" cy="1135" r="10" fill="#8b5cf6"/>
+        <text class="step-num" x="290" y="1135">21</text>
+        <line class="msg-line" x1="356" y1="1150" x2="232" y2="1150" stroke="#8b5cf6" stroke-dasharray="5 3" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="290" y="1143" text-anchor="middle">CopilotResult</text>
+      </g>
+
+      <!-- 22: UI → User -->
+      <g>
+        <circle class="step-num-circle" cx="150" cy="1195" r="10" fill="#6366f1"/>
+        <text class="step-num" x="150" y="1195">22</text>
+        <line class="msg-line" x1="216" y1="1210" x2="92" y2="1210" stroke="#6366f1" stroke-dasharray="5 3" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="150" y="1203" text-anchor="middle">_render_assistant_block(result)</text>
+      </g>
+
+      <!-- Exit point -->
+      <circle class="exit-dot" cx="80" cy="1245" r="8"/>
+      <text class="exit-label" x="22" y="1249">EXIT</text>
+    </svg>
+
+    <div class="legend">
+      <span><span class="swatch" style="background:#0ea5e9"></span>User</span>
+      <span><span class="swatch" style="background:#6366f1"></span>UI</span>
+      <span><span class="swatch" style="background:#8b5cf6"></span>Orchestrator</span>
+      <span><span class="swatch" style="background:#f59e0b"></span>Router</span>
+      <span><span class="swatch" style="background:#3b82f6"></span>SQL Agent</span>
+      <span><span class="swatch" style="background:#10b981"></span>RAG Agent</span>
+      <span><span class="swatch" style="background:#ec4899"></span>Claude API</span>
+      <span><span class="swatch" style="background:#ef4444"></span>Databricks</span>
+      <span style="margin-left: 16px;"><span class="swatch" style="background:#0ea5e9; border-radius:50%; height:10px; width:10px;"></span>Entry / Exit</span>
+      <span><span style="display:inline-block; width:24px; height:1.5px; background:#666;"></span> request</span>
+      <span><span style="display:inline-block; width:24px; height:1.5px; background:repeating-linear-gradient(to right, #666 0, #666 3px, transparent 3px, transparent 6px);"></span> response</span>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>Conditional segments.</strong> Steps 7–13 only run when <code>decision.needs_sql</code> is true (analytical or hybrid).
+    Steps 14–17 only run when <code>decision.needs_docs</code> is true (knowledge or hybrid). Pure knowledge questions skip the SQL block entirely; pure analytical questions skip the RAG block. The synthesis call (19–20) always fires — but the context it sees changes based on which agents ran.
+  </div>
+</section>
+
+<!-- ========== DEPENDENCIES ========== -->
+<section id="deps">
+  <h2>Module dependencies</h2>
+  <p class="lede">
+    Layered import graph. Higher layers depend on lower layers, never the reverse. The
+    only sideways edge is the orchestrator pulling in both agents — that's intentional,
+    it's the conductor's whole job. Click a node to see its file on GitHub.
+  </p>
+
+  <div class="deps-wrap">
+    <svg class="deps" viewBox="0 0 1100 620" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="dep-arrow" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="8" markerHeight="8" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" class="edge-head"/>
+        </marker>
+      </defs>
+
+      <!-- Layer labels -->
+      <text class="layer-label" x="20" y="60">UI · L1</text>
+      <text class="layer-label" x="20" y="170">CONDUCTOR · L2</text>
+      <text class="layer-label" x="20" y="280">AGENTS · L3</text>
+      <text class="layer-label" x="20" y="390">DATA &amp; CONFIG · L4</text>
+      <text class="layer-label" x="20" y="500">EXTERNAL · L5</text>
+
+      <!-- Layer dividers (subtle) -->
+      <line x1="160" y1="100" x2="1080" y2="100" stroke="#e4e6ed" stroke-width="1"/>
+      <line x1="160" y1="210" x2="1080" y2="210" stroke="#e4e6ed" stroke-width="1"/>
+      <line x1="160" y1="320" x2="1080" y2="320" stroke="#e4e6ed" stroke-width="1"/>
+      <line x1="160" y1="430" x2="1080" y2="430" stroke="#e4e6ed" stroke-width="1"/>
+
+      <!-- L1: streamlit_app -->
+      <g class="node">
+        <rect x="500" y="40" width="180" height="48" fill="#6366f1"/>
+        <text x="590" y="56">streamlit_app.py</text>
+        <text x="590" y="74" font-size="10" opacity="0.8">live chat UI</text>
+      </g>
+
+      <!-- L2: orchestrator -->
+      <g class="node">
+        <rect x="500" y="148" width="180" height="48" fill="#8b5cf6"/>
+        <text x="590" y="164">orchestrator.py</text>
+        <text x="590" y="182" font-size="10" opacity="0.8">answer() · CopilotResult</text>
+      </g>
+
+      <!-- L3: agents -->
+      <g class="node">
+        <rect x="220" y="258" width="160" height="48" fill="#f59e0b"/>
+        <text x="300" y="274">router.py</text>
+        <text x="300" y="292" font-size="10" opacity="0.8">classify()</text>
+      </g>
+      <g class="node">
+        <rect x="500" y="258" width="160" height="48" fill="#3b82f6"/>
+        <text x="580" y="274">sql_agent.py</text>
+        <text x="580" y="292" font-size="10" opacity="0.8">run_sql_question()</text>
+      </g>
+      <g class="node">
+        <rect x="780" y="258" width="160" height="48" fill="#10b981"/>
+        <text x="860" y="274">rag_agent.py</text>
+        <text x="860" y="292" font-size="10" opacity="0.8">retrieve()</text>
+      </g>
+
+      <!-- L4: data & config -->
+      <g class="node">
+        <rect x="330" y="368" width="180" height="48" fill="#0ea5e9"/>
+        <text x="420" y="384">semantic_layer.py</text>
+        <text x="420" y="402" font-size="10" opacity="0.8">schema + metrics + vocab</text>
+      </g>
+      <g class="node">
+        <rect x="630" y="368" width="180" height="48" fill="#0ea5e9"/>
+        <text x="720" y="384">config.py</text>
+        <text x="720" y="402" font-size="10" opacity="0.8">.env loader · constants</text>
+      </g>
+
+      <!-- L5: external -->
+      <g class="node">
+        <rect x="200" y="478" width="140" height="42" fill="#ec4899"/>
+        <text x="270" y="494">claude-agent-sdk</text>
+        <text x="270" y="510" font-size="10" opacity="0.8">Haiku · Sonnet</text>
+      </g>
+      <g class="node">
+        <rect x="370" y="478" width="180" height="42" fill="#ef4444"/>
+        <text x="460" y="494">databricks-sql-connector</text>
+        <text x="460" y="510" font-size="10" opacity="0.8">SQL warehouse</text>
+      </g>
+      <g class="node">
+        <rect x="580" y="478" width="180" height="42" fill="#ef4444"/>
+        <text x="670" y="494">databricks-vectorsearch</text>
+        <text x="670" y="510" font-size="10" opacity="0.8">VS endpoint + index</text>
+      </g>
+      <g class="node">
+        <rect x="790" y="478" width="120" height="42" fill="#64748b"/>
+        <text x="850" y="494">pymupdf</text>
+        <text x="850" y="510" font-size="10" opacity="0.8">PDF text extract</text>
+      </g>
+      <g class="node">
+        <rect x="930" y="478" width="120" height="42" fill="#64748b"/>
+        <text x="990" y="494">reportlab</text>
+        <text x="990" y="510" font-size="10" opacity="0.8">PDF generate</text>
+      </g>
+
+      <!-- Offline ingest nodes (right side, separate flow) -->
+      <g class="node">
+        <rect x="940" y="258" width="140" height="48" fill="#64748b"/>
+        <text x="1010" y="274">pdf_ingest.py</text>
+        <text x="1010" y="292" font-size="10" opacity="0.8">offline</text>
+      </g>
+      <g class="node">
+        <rect x="940" y="148" width="140" height="48" fill="#64748b"/>
+        <text x="1010" y="164">build_synthetic_pdfs</text>
+        <text x="1010" y="182" font-size="10" opacity="0.8">scripts/</text>
+      </g>
+
+      <!-- Edges: L1 → L2 -->
+      <path class="edge" d="M590,88 L590,148" marker-end="url(#dep-arrow)"/>
+
+      <!-- L2 → L3 -->
+      <path class="edge" d="M540,196 L320,258" marker-end="url(#dep-arrow)"/>
+      <path class="edge" d="M590,196 L580,258" marker-end="url(#dep-arrow)"/>
+      <path class="edge" d="M640,196 L860,258" marker-end="url(#dep-arrow)"/>
+
+      <!-- L3 → L4: semantic_layer used by router + sql_agent + pdf_ingest -->
+      <path class="edge" d="M310,306 L400,368" marker-end="url(#dep-arrow)"/>
+      <path class="edge" d="M560,306 L440,368" marker-end="url(#dep-arrow)"/>
+      <path class="edge" d="M990,306 L450,368" marker-end="url(#dep-arrow)"/>
+
+      <!-- L3 → L4: config used by everyone -->
+      <path class="edge" d="M340,306 L700,368" marker-end="url(#dep-arrow)"/>
+      <path class="edge" d="M600,306 L720,368" marker-end="url(#dep-arrow)"/>
+      <path class="edge" d="M860,306 L740,368" marker-end="url(#dep-arrow)"/>
+      <path class="edge" d="M1010,306 L760,368" marker-end="url(#dep-arrow)"/>
+
+      <!-- L1 also uses config -->
+      <path class="edge" d="M635,88 L750,368" marker-end="url(#dep-arrow)" opacity="0.4"/>
+
+      <!-- L2 also uses config -->
+      <path class="edge" d="M650,196 L760,368" marker-end="url(#dep-arrow)" opacity="0.4"/>
+
+      <!-- L4 → L5: semantic_layer/config to external libs (none directly, but config loads dotenv) -->
+      <!-- skip — keeps the diagram cleaner -->
+
+      <!-- L3 → L5: router → claude-agent-sdk -->
+      <path class="edge" d="M280,306 L270,478" marker-end="url(#dep-arrow)"/>
+      <!-- sql_agent → claude-agent-sdk + databricks-sql-connector -->
+      <path class="edge" d="M520,306 L300,478" marker-end="url(#dep-arrow)"/>
+      <path class="edge" d="M580,306 L460,478" marker-end="url(#dep-arrow)"/>
+      <!-- rag_agent → databricks-vectorsearch -->
+      <path class="edge" d="M860,306 L670,478" marker-end="url(#dep-arrow)"/>
+      <!-- pdf_ingest → claude-agent-sdk + pymupdf -->
+      <path class="edge" d="M970,306 L320,478" marker-end="url(#dep-arrow)"/>
+      <path class="edge" d="M1010,306 L860,478" marker-end="url(#dep-arrow)"/>
+      <!-- build_synthetic_pdfs → reportlab -->
+      <path class="edge" d="M1010,196 L990,478" marker-end="url(#dep-arrow)"/>
+
+      <!-- L2 → claude (synthesis call) -->
+      <path class="edge" d="M540,196 L280,478" marker-end="url(#dep-arrow)" opacity="0.4"/>
+    </svg>
+  </div>
+
+  <h2 style="margin-top: 48px;">External services &amp; libraries</h2>
+  <p class="lede">
+    What each module reaches outside the repo for. Subscription auth via <code>claude login</code>
+    covers all Claude API access; Databricks PAT in <code>.env</code> covers both Databricks services.
+  </p>
+
+  <table class="ext-deps">
+    <thead>
+      <tr>
+        <th>Library / Service</th>
+        <th>Type</th>
+        <th>Used by</th>
+        <th>What for</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>claude-agent-sdk</code></td>
+        <td><span class="tag ai">Claude API</span></td>
+        <td><code>router.py</code> · <code>sql_agent.py</code> · <code>orchestrator.py</code> · <code>pdf_ingest.py</code></td>
+        <td>Haiku (routing, tagging) and Sonnet (SQL generation, synthesis). Subscription OAuth.</td>
+      </tr>
+      <tr>
+        <td><code>databricks-sql-connector</code></td>
+        <td><span class="tag svc">Databricks</span></td>
+        <td><code>sql_agent.py</code></td>
+        <td>Execute generated SELECT against the Serverless SQL warehouse.</td>
+      </tr>
+      <tr>
+        <td><code>databricks-vectorsearch</code></td>
+        <td><span class="tag svc">Databricks</span></td>
+        <td><code>rag_agent.py</code> (and ingestion notebook)</td>
+        <td>Query the Vector Search index with metadata filters; create/sync index offline.</td>
+      </tr>
+      <tr>
+        <td><code>streamlit</code> + <code>pandas</code></td>
+        <td><span class="tag">Python</span></td>
+        <td><code>streamlit_app.py</code></td>
+        <td>Chat UI + rendering result DataFrames in the provenance expander.</td>
+      </tr>
+      <tr>
+        <td><code>pymupdf</code> <span class="mono">(fitz)</span></td>
+        <td><span class="tag">Python</span></td>
+        <td><code>pdf_ingest.py</code></td>
+        <td>Local PDF text extraction. Runs on laptop; never deployed.</td>
+      </tr>
+      <tr>
+        <td><code>reportlab</code></td>
+        <td><span class="tag">Python</span></td>
+        <td><code>scripts/build_synthetic_pdfs.py</code></td>
+        <td>Render <code>data/pdf_source.json</code> into formatted PDFs.</td>
+      </tr>
+      <tr>
+        <td><code>python-dotenv</code></td>
+        <td><span class="tag">Python</span></td>
+        <td><code>config.py</code></td>
+        <td>Load <code>.env</code> into <code>os.environ</code> on import.</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ========== EXIT POINTS ========== -->
+<section id="exit">
+  <h2>Exit points</h2>
+  <p class="lede">
+    Where execution lands. Every code path terminates in one of these. The UI exit is
+    the rep-facing one; the rest are CLI demos and offline pipelines.
+  </p>
+
+  <div class="point-grid">
+    <div class="point-card exit">
+      <h4><span class="icon exit">●</span> Rendered answer in the browser <span class="pill">primary</span></h4>
+      <p>The Streamlit UI displays the synthesized answer with inline citations, plus an expander showing the route, SQL, rows, and retrieved sources.</p>
+      <pre>app/streamlit_app.py
+└─ _render_assistant_block(result)</pre>
+    </div>
+
+    <div class="point-card exit">
+      <h4><span class="icon exit">●</span> stdout (CLI demos)</h4>
+      <p>The <code>_demo()</code> functions in router, sql_agent, rag_agent, and orchestrator all print to stdout. UTF-8 forced for em-dash safety on Windows.</p>
+      <pre>sys.stdout.reconfigure(encoding="utf-8")
+print(...)</pre>
+    </div>
+
+    <div class="point-card exit">
+      <h4><span class="icon exit">●</span> Delta table write + VS index sync</h4>
+      <p>The Databricks ingestion cell finishes by overwriting the corpus Delta table and triggering an asynchronous Vector Search index sync. Poll until ready.</p>
+      <pre>workspace.pharma_copilot.support_corpus_chunks
+└─ idx.sync()</pre>
+    </div>
+
+    <div class="point-card exit">
+      <h4><span class="icon exit">●</span> data/support_corpus.json</h4>
+      <p>The local <code>pdf_ingest.py</code> pipeline ends by overwriting this JSON file. The Databricks notebook reads it via raw GitHub URL.</p>
+      <pre>data/support_corpus.json
+└─ list[{doc_id, title, doc_type, product, region, content}]</pre>
+    </div>
+
+    <div class="point-card exit">
+      <h4><span class="icon exit">●</span> data/pdfs/*.pdf</h4>
+      <p>The PDF generator script exits after writing all PDFs from <code>data/pdf_source.json</code>.</p>
+      <pre>data/pdfs/
+├─ Oncorix_Field_Reference_Guide.pdf
+├─ ImmunoShield_Access_Guide.pdf
+└─ ...</pre>
+    </div>
+
+    <div class="point-card exit">
+      <h4><span class="icon exit">●</span> Raised exception (failure exit)</h4>
+      <p>Hard failures bubble: missing env vars, broken Databricks creds, exhausted SQL retries. The UI catches these and renders an <code>st.error</code> block; CLI demos print a traceback.</p>
+      <pre># orchestrator.py
+except Exception as e:
+    st.error(f"Pipeline error: {e}")</pre>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script>
+  // Active nav highlighting on scroll
+  const sections = ['entry', 'flow', 'deps', 'exit'];
+  const navLinks = document.querySelectorAll('.topbar nav a');
+  function onScroll() {
+    let active = sections[0];
+    for (const id of sections) {
+      const el = document.getElementById(id);
+      if (!el) continue;
+      const top = el.getBoundingClientRect().top;
+      if (top < 140) active = id;
+    }
+    navLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + active));
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+</script>
+
+</body>
+</html>
