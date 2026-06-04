@@ -4,7 +4,7 @@ A support assistant for pharma sales reps. A router classifies each question and
 it down the right path:
 
 - **analytical** → Text-to-SQL over the existing `pharma_sales` Databricks tables
-- **knowledge** → document RAG over a synthetic rep-support corpus in Databricks Vector Search
+- **knowledge** → document RAG over a rep-support corpus (built from synthetic PDFs) in Databricks Vector Search
 - **hybrid** → both, merged by Claude into one cited answer
 
 The differentiator is the **router + semantic layer**, not the model.
@@ -39,9 +39,14 @@ claude login
    ```
    python -m app.router
    ```
-2. **Ingest the support corpus** — run `app/ingest.py` as a Databricks notebook inside the
-   workspace. Creates the Delta table + Vector Search endpoint + Delta Sync index.
-3. **Launch the app:**
+2. **Build the support corpus from PDFs** (local — needs `claude login` for tagging):
+   ```
+   python -m scripts.build_synthetic_pdfs   # render data/pdf_source.json → data/pdfs/*.pdf
+   python -m app.pdf_ingest                 # pymupdf text extract + Claude auto-tagging → data/support_corpus.json
+   ```
+3. **Ingest the corpus into Vector Search** — run `app/ingest.py` as a Databricks notebook inside the
+   workspace. Chunks the corpus, writes the Delta table, and creates the Vector Search endpoint + Delta Sync index.
+4. **Launch the app:**
    ```
    streamlit run app/streamlit_app.py
    ```
@@ -53,13 +58,18 @@ app/
   config.py          # loads .env
   semantic_layer.py  # schema + metric definitions for the SQL agent
   router.py          # question classifier + metadata extractor (the differentiator)
+  pdf_ingest.py      # PDF → text (pymupdf) → Claude auto-tagging → support_corpus.json
   ingest.py          # corpus → Delta → Vector Search index (run on Databricks)
   sql_agent.py       # analytical path
   rag_agent.py       # knowledge path (filtered retrieval)
   orchestrator.py    # ties router + agents + synthesis
   streamlit_app.py   # chat UI
+scripts/
+  build_synthetic_pdfs.py  # render data/pdf_source.json → data/pdfs/*.pdf (reportlab)
 data/
-  support_corpus.json
+  pdf_source.json      # source content for the synthetic PDFs
+  pdfs/                # generated PDFs — the raw corpus input
+  support_corpus.json  # extracted + tagged corpus — the Vector Search input
 ```
 
 See `plan.md` for the step-by-step build plan.
