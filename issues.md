@@ -202,6 +202,28 @@ def chunk(text, target=800):
 
 ---
 
+## 19. Verified the re-ingested index actually holds the new PDF chunks (and nothing stale)
+
+**What we did:** After the Databricks re-ingest (#14), confirmed from the laptop that the Vector Search index contained the new PDF-derived corpus and none of the old 11-doc corpus — no Spark needed, since the app side talks to the index remotely via the Vector Search SDK + PAT.
+
+**Method:** `idx.describe()` for the row count, then a filter-search per new `doc_id` to prove presence:
+```python
+from databricks.vector_search.client import VectorSearchClient
+from app import config
+idx = VectorSearchClient(disable_notice=True).get_index(
+    endpoint_name=config.VECTOR_SEARCH_ENDPOINT, index_name=config.INDEX_FQN)
+print(idx.describe()["status"])          # ready, detailed_state, indexed_row_count
+idx.similarity_search(query_text="overview", columns=["chunk_id", "doc_id"],
+                      filters={"doc_id": "ONCORIX-FIELD-REFERENCE-GUIDE"},
+                      num_results=20, disable_notice=True)
+```
+
+**Result:** `ready=True`, `state=ONLINE_NO_PENDING_UPDATE`, `indexed_row_count=12`. All 5/5 new docs present — chunk counts: AE policy 2, Cardiozen brief 3, Cardiozen formulary 2, ImmunoShield 3, Oncorix 2. The per-doc counts sum to **exactly 12 = total row count**, proving the prior corpus was fully overwritten with no leftovers.
+
+**Lesson:** To verify a Delta-Sync index after an ingest without Spark, filter-search by `doc_id` and cross-check that the per-doc chunk counts sum to `indexed_row_count`. A matching sum proves both presence (new docs in) and cleanliness (old docs gone) in one shot.
+
+---
+
 ## 11. Databricks notebook can't see local `data/support_corpus.json`
 
 **What we hit:** `ingest.py` reads the corpus from a local file path. The Databricks notebook runs in the cloud, with no access to your laptop's filesystem.
