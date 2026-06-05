@@ -18,6 +18,16 @@
       --analytical: #3b82f6;
       --knowledge: #10b981;
       --hybrid: #8b5cf6;
+      --user-c: #0ea5e9;
+      --ui-c: #6366f1;
+      --orch-c: #8b5cf6;
+      --router-c: #f59e0b;
+      --sql-c: #3b82f6;
+      --rag-c: #10b981;
+      --claude-c: #ec4899;
+      --dbx-c: #ef4444;
+      --entry-c: #22c55e;
+      --exit-c: #ef4444;
       --shadow: 0 1px 3px rgba(15, 23, 42, .06), 0 1px 2px rgba(15, 23, 42, .04);
     }
 
@@ -275,6 +285,31 @@
     }
     .note strong { color: #92400e; }
 
+    /* ---------- SWIMLANE ---------- */
+    .swimlane-wrap {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; box-shadow: var(--shadow);
+      padding: 24px; overflow-x: auto;
+    }
+    svg.swimlane {
+      display: block; min-width: 1180px; width: 100%; height: auto;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+    .swimlane .lane-header rect { stroke-width: 1.5; rx: 8; ry: 8; }
+    .swimlane .lane-header text { font-size: 12px; font-weight: 600; fill: #ffffff; }
+    .swimlane .lifeline { stroke: #c7cad8; stroke-width: 1; stroke-dasharray: 4 4; }
+    .swimlane .activity { opacity: 0.16; stroke-width: 0; }
+    .swimlane .msg-line { stroke-width: 1.5; fill: none; }
+    .swimlane .msg-head { stroke-width: 0; }
+    .swimlane .msg-label { font-size: 11.5px; fill: var(--text); font-weight: 500; }
+    .swimlane .msg-sub { font-size: 10.5px; fill: var(--muted); }
+    .swimlane .step-num { font-size: 10px; fill: #fff; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
+    .swimlane .step-num-circle { stroke-width: 0; }
+    .swimlane .entry-dot { fill: var(--entry-c); }
+    .swimlane .exit-dot { fill: var(--exit-c); }
+    .swimlane .entry-label { fill: var(--entry-c); font-size: 11px; font-weight: 600; }
+    .swimlane .exit-label  { fill: var(--exit-c);  font-size: 11px; font-weight: 600; }
+
     @media (max-width: 720px) {
       .topbar nav { display: none; }
       .api-grid, .io-grid { grid-template-columns: 1fr; }
@@ -291,6 +326,7 @@
     <a href="#architecture">Architecture</a>
     <a href="#routes">Routes</a>
     <a href="#modules">Modules</a>
+    <a href="#swimlane">Swimlane</a>
     <a href="#trace">Trace a question</a>
     <a href="#shapes">Data shapes</a>
     <a href="swimlane.html">Swimlane &amp; deps →</a>
@@ -818,6 +854,217 @@ docs.<span class="n">append</span>({
 
 </section>
 
+<!-- ========== SWIMLANE ========== -->
+<section id="swimlane">
+  <h2>Swimlane — end-to-end hybrid question</h2>
+  <p class="lede">
+    A sequence-diagram view of the same hybrid question covered below in the step-by-step trace.
+    Each column is an actor; each horizontal arrow is a function call or service request, in time
+    order top-to-bottom. Solid arrows are requests; dashed arrows are responses. Activity bars
+    show when each actor is on the critical path. Conditional segments: steps 7–13 only fire when
+    <code>needs_sql</code>, steps 14–17 only when <code>needs_docs</code>.
+  </p>
+
+  <div class="swimlane-wrap">
+    <svg class="swimlane" viewBox="0 0 1200 1280" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="sw-arrow" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z"/>
+        </marker>
+      </defs>
+
+      <!-- Lane headers -->
+      <g class="lane-header">
+        <g><rect x="20"   y="20" width="120" height="46" fill="#0ea5e9"/><text x="80"   y="48" text-anchor="middle">User (rep)</text></g>
+        <g><rect x="160"  y="20" width="120" height="46" fill="#6366f1"/><text x="220"  y="42" text-anchor="middle">Streamlit UI</text><text x="220" y="58" text-anchor="middle" font-size="10" opacity="0.8">streamlit_app.py</text></g>
+        <g><rect x="300"  y="20" width="120" height="46" fill="#8b5cf6"/><text x="360"  y="42" text-anchor="middle">Orchestrator</text><text x="360" y="58" text-anchor="middle" font-size="10" opacity="0.8">orchestrator.py</text></g>
+        <g><rect x="440"  y="20" width="120" height="46" fill="#f59e0b"/><text x="500"  y="42" text-anchor="middle">Router</text><text x="500" y="58" text-anchor="middle" font-size="10" opacity="0.8">router.py</text></g>
+        <g><rect x="580"  y="20" width="120" height="46" fill="#3b82f6"/><text x="640"  y="42" text-anchor="middle">SQL Agent</text><text x="640" y="58" text-anchor="middle" font-size="10" opacity="0.8">sql_agent.py</text></g>
+        <g><rect x="720"  y="20" width="120" height="46" fill="#10b981"/><text x="780"  y="42" text-anchor="middle">RAG Agent</text><text x="780" y="58" text-anchor="middle" font-size="10" opacity="0.8">rag_agent.py</text></g>
+        <g><rect x="860"  y="20" width="120" height="46" fill="#ec4899"/><text x="920"  y="42" text-anchor="middle">Claude API</text><text x="920" y="58" text-anchor="middle" font-size="10" opacity="0.8">Haiku · Sonnet</text></g>
+        <g><rect x="1000" y="20" width="120" height="46" fill="#ef4444"/><text x="1060" y="42" text-anchor="middle">Databricks</text><text x="1060" y="58" text-anchor="middle" font-size="10" opacity="0.8">SQL · Vector Search</text></g>
+      </g>
+
+      <!-- Lifelines -->
+      <line class="lifeline" x1="80"   y1="70" x2="80"   y2="1250"/>
+      <line class="lifeline" x1="220"  y1="70" x2="220"  y2="1250"/>
+      <line class="lifeline" x1="360"  y1="70" x2="360"  y2="1250"/>
+      <line class="lifeline" x1="500"  y1="70" x2="500"  y2="1250"/>
+      <line class="lifeline" x1="640"  y1="70" x2="640"  y2="1250"/>
+      <line class="lifeline" x1="780"  y1="70" x2="780"  y2="1250"/>
+      <line class="lifeline" x1="920"  y1="70" x2="920"  y2="1250"/>
+      <line class="lifeline" x1="1060" y1="70" x2="1060" y2="1250"/>
+
+      <!-- Entry point -->
+      <circle class="entry-dot" cx="80" cy="105" r="8"/>
+      <text class="entry-label" x="22" y="109">ENTRY</text>
+
+      <!-- Activity bars -->
+      <rect class="activity" x="74"   y="105"  width="12" height="1145" fill="#0ea5e9"/>
+      <rect class="activity" x="214"  y="140"  width="12" height="1080" fill="#6366f1"/>
+      <rect class="activity" x="354"  y="180"  width="12" height="980"  fill="#8b5cf6"/>
+      <rect class="activity" x="494"  y="220"  width="12" height="170"  fill="#f59e0b"/>
+      <rect class="activity" x="634"  y="430"  width="12" height="290"  fill="#3b82f6"/>
+      <rect class="activity" x="774"  y="760"  width="12" height="170"  fill="#10b981"/>
+
+      <!-- Messages -->
+      <g>
+        <circle class="step-num-circle" cx="148" cy="125" r="10" fill="#0ea5e9"/>
+        <text class="step-num" x="148" y="125">1</text>
+        <line class="msg-line" x1="92" y1="140" x2="216" y2="140" stroke="#0ea5e9" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="160" y="133">types question into st.chat_input</text>
+      </g>
+      <g>
+        <circle class="step-num-circle" cx="288" cy="165" r="10" fill="#6366f1"/>
+        <text class="step-num" x="288" y="165">2</text>
+        <line class="msg-line" x1="232" y1="180" x2="356" y2="180" stroke="#6366f1" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="300" y="173">orchestrator.answer(question)</text>
+      </g>
+      <g>
+        <circle class="step-num-circle" cx="428" cy="205" r="10" fill="#8b5cf6"/>
+        <text class="step-num" x="428" y="205">3</text>
+        <line class="msg-line" x1="372" y1="220" x2="496" y2="220" stroke="#8b5cf6" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="440" y="213">router.classify(question)</text>
+      </g>
+      <g>
+        <circle class="step-num-circle" cx="710" cy="260" r="10" fill="#f59e0b"/>
+        <text class="step-num" x="710" y="260">4</text>
+        <line class="msg-line" x1="512" y1="275" x2="916" y2="275" stroke="#f59e0b" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="710" y="268" text-anchor="middle">Haiku · system_prompt + question</text>
+        <text class="msg-sub" x="710" y="290" text-anchor="middle">allowed_tools=[] · no tools, JSON only</text>
+      </g>
+      <g>
+        <circle class="step-num-circle" cx="710" cy="335" r="10" fill="#ec4899"/>
+        <text class="step-num" x="710" y="335">5</text>
+        <line class="msg-line" x1="916" y1="350" x2="512" y2="350" stroke="#ec4899" stroke-dasharray="5 3" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="710" y="343" text-anchor="middle">JSON: {route, filters, reasoning}</text>
+      </g>
+      <g>
+        <circle class="step-num-circle" cx="428" cy="385" r="10" fill="#f59e0b"/>
+        <text class="step-num" x="428" y="385">6</text>
+        <line class="msg-line" x1="496" y1="400" x2="372" y2="400" stroke="#f59e0b" stroke-dasharray="5 3" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="440" y="393">RouterDecision (vocab-validated)</text>
+      </g>
+      <g>
+        <circle class="step-num-circle" cx="500" cy="430" r="10" fill="#8b5cf6"/>
+        <text class="step-num" x="500" y="430">7</text>
+        <line class="msg-line" x1="372" y1="445" x2="636" y2="445" stroke="#8b5cf6" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="500" y="438" text-anchor="middle">if decision.needs_sql → sql_agent.run_sql_question(q, scope=filters)</text>
+      </g>
+      <g>
+        <circle class="step-num-circle" cx="780" cy="475" r="10" fill="#3b82f6"/>
+        <text class="step-num" x="780" y="475">8</text>
+        <line class="msg-line" x1="652" y1="490" x2="916" y2="490" stroke="#3b82f6" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="780" y="483" text-anchor="middle">Sonnet · schema_context + question</text>
+        <text class="msg-sub" x="780" y="505" text-anchor="middle">semantic_layer.get_schema_context(scope)</text>
+      </g>
+      <g>
+        <circle class="step-num-circle" cx="780" cy="525" r="10" fill="#ec4899"/>
+        <text class="step-num" x="780" y="525">9</text>
+        <line class="msg-line" x1="916" y1="540" x2="652" y2="540" stroke="#ec4899" stroke-dasharray="5 3" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="780" y="533" text-anchor="middle">single SELECT statement</text>
+      </g>
+      <g>
+        <circle class="step-num-circle" cx="668" cy="575" r="10" fill="#3b82f6"/>
+        <text class="step-num" x="668" y="575">10</text>
+        <path class="msg-line" d="M652,585 Q700,575 700,595 Q700,615 652,605" stroke="#3b82f6" fill="none" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="710" y="595">_validate(sql) — reject DDL/DML/multi-stmt</text>
+      </g>
+      <g>
+        <circle class="step-num-circle" cx="850" cy="625" r="10" fill="#3b82f6"/>
+        <text class="step-num" x="850" y="625">11</text>
+        <line class="msg-line" x1="652" y1="640" x2="1056" y2="640" stroke="#3b82f6" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="850" y="633" text-anchor="middle">execute via databricks-sql-connector</text>
+        <text class="msg-sub" x="850" y="655" text-anchor="middle">workspace.pharma_sales</text>
+      </g>
+      <g>
+        <circle class="step-num-circle" cx="850" cy="675" r="10" fill="#ef4444"/>
+        <text class="step-num" x="850" y="675">12</text>
+        <line class="msg-line" x1="1056" y1="690" x2="652" y2="690" stroke="#ef4444" stroke-dasharray="5 3" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="850" y="683" text-anchor="middle">columns + rows</text>
+      </g>
+      <g>
+        <circle class="step-num-circle" cx="500" cy="720" r="10" fill="#3b82f6"/>
+        <text class="step-num" x="500" y="720">13</text>
+        <line class="msg-line" x1="636" y1="735" x2="372" y2="735" stroke="#3b82f6" stroke-dasharray="5 3" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="500" y="728" text-anchor="middle">{sql, columns, rows}</text>
+      </g>
+      <g>
+        <circle class="step-num-circle" cx="570" cy="765" r="10" fill="#8b5cf6"/>
+        <text class="step-num" x="570" y="765">14</text>
+        <line class="msg-line" x1="372" y1="780" x2="776" y2="780" stroke="#8b5cf6" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="570" y="773" text-anchor="middle">if decision.needs_docs → rag_agent.retrieve(q, filters=filters)</text>
+      </g>
+      <g>
+        <circle class="step-num-circle" cx="920" cy="810" r="10" fill="#10b981"/>
+        <text class="step-num" x="920" y="810">15</text>
+        <line class="msg-line" x1="796" y1="825" x2="1056" y2="825" stroke="#10b981" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="920" y="818" text-anchor="middle">similarity_search(query, filters, top_k)</text>
+        <text class="msg-sub" x="920" y="840" text-anchor="middle">Vector Search · managed embeddings</text>
+      </g>
+      <g>
+        <circle class="step-num-circle" cx="920" cy="860" r="10" fill="#ef4444"/>
+        <text class="step-num" x="920" y="860">16</text>
+        <line class="msg-line" x1="1056" y1="875" x2="796" y2="875" stroke="#ef4444" stroke-dasharray="5 3" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="920" y="868" text-anchor="middle">data_array + scores</text>
+      </g>
+      <g>
+        <circle class="step-num-circle" cx="570" cy="905" r="10" fill="#10b981"/>
+        <text class="step-num" x="570" y="905">17</text>
+        <line class="msg-line" x1="776" y1="920" x2="372" y2="920" stroke="#10b981" stroke-dasharray="5 3" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="570" y="913" text-anchor="middle">list[RetrievedChunk] (post-threshold)</text>
+      </g>
+      <g>
+        <circle class="step-num-circle" cx="388" cy="955" r="10" fill="#8b5cf6"/>
+        <text class="step-num" x="388" y="955">18</text>
+        <path class="msg-line" d="M372,965 Q420,955 420,975 Q420,995 372,985" stroke="#8b5cf6" fill="none" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="432" y="977">_build_context_block(sql_result, chunks)</text>
+      </g>
+      <g>
+        <circle class="step-num-circle" cx="640" cy="1015" r="10" fill="#8b5cf6"/>
+        <text class="step-num" x="640" y="1015">19</text>
+        <line class="msg-line" x1="372" y1="1030" x2="916" y2="1030" stroke="#8b5cf6" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="640" y="1023" text-anchor="middle">Sonnet · system: forbid unsupported claims, require citations</text>
+        <text class="msg-sub" x="640" y="1045" text-anchor="middle">user: REP QUESTION + CONTEXT (SQL block + docs block)</text>
+      </g>
+      <g>
+        <circle class="step-num-circle" cx="640" cy="1075" r="10" fill="#ec4899"/>
+        <text class="step-num" x="640" y="1075">20</text>
+        <line class="msg-line" x1="916" y1="1090" x2="372" y2="1090" stroke="#ec4899" stroke-dasharray="5 3" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="640" y="1083" text-anchor="middle">markdown answer with inline [SQL] / [doc_id] citations</text>
+      </g>
+      <g>
+        <circle class="step-num-circle" cx="290" cy="1135" r="10" fill="#8b5cf6"/>
+        <text class="step-num" x="290" y="1135">21</text>
+        <line class="msg-line" x1="356" y1="1150" x2="232" y2="1150" stroke="#8b5cf6" stroke-dasharray="5 3" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="290" y="1143" text-anchor="middle">CopilotResult</text>
+      </g>
+      <g>
+        <circle class="step-num-circle" cx="150" cy="1195" r="10" fill="#6366f1"/>
+        <text class="step-num" x="150" y="1195">22</text>
+        <line class="msg-line" x1="216" y1="1210" x2="92" y2="1210" stroke="#6366f1" stroke-dasharray="5 3" marker-end="url(#sw-arrow)"/>
+        <text class="msg-label" x="150" y="1203" text-anchor="middle">_render_assistant_block(result)</text>
+      </g>
+
+      <!-- Exit point -->
+      <circle class="exit-dot" cx="80" cy="1245" r="8"/>
+      <text class="exit-label" x="22" y="1249">EXIT</text>
+    </svg>
+
+    <div class="legend" style="margin-top: 20px;">
+      <span><span class="dot" style="background:#0ea5e9; width:10px; height:10px; border-radius:3px; display:inline-block;"></span> User</span>
+      <span><span class="dot" style="background:#6366f1; width:10px; height:10px; border-radius:3px; display:inline-block;"></span> UI</span>
+      <span><span class="dot" style="background:#8b5cf6; width:10px; height:10px; border-radius:3px; display:inline-block;"></span> Orchestrator</span>
+      <span><span class="dot" style="background:#f59e0b; width:10px; height:10px; border-radius:3px; display:inline-block;"></span> Router</span>
+      <span><span class="dot" style="background:#3b82f6; width:10px; height:10px; border-radius:3px; display:inline-block;"></span> SQL Agent</span>
+      <span><span class="dot" style="background:#10b981; width:10px; height:10px; border-radius:3px; display:inline-block;"></span> RAG Agent</span>
+      <span><span class="dot" style="background:#ec4899; width:10px; height:10px; border-radius:3px; display:inline-block;"></span> Claude API</span>
+      <span><span class="dot" style="background:#ef4444; width:10px; height:10px; border-radius:3px; display:inline-block;"></span> Databricks</span>
+    </div>
+  </div>
+</section>
+
 <!-- ========== TRACE ========== -->
 <section id="trace">
   <h2>End-to-end trace: a hybrid question</h2>
@@ -1167,7 +1414,7 @@ so future reruns of the script re-render the entire history.</div>
   setStep(1);
 
   // ========== ACTIVE NAV HIGHLIGHTING ON SCROLL ==========
-  const sections = ['architecture', 'routes', 'modules', 'trace', 'shapes'];
+  const sections = ['architecture', 'routes', 'modules', 'swimlane', 'trace', 'shapes'];
   const navLinks = document.querySelectorAll('.topbar nav a');
   function onScroll() {
     let active = sections[0];
