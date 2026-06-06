@@ -1,4 +1,4 @@
-"""Streamlit chat UI for the analytics copilot.
+"""Streamlit chat UI for Switchboard.
 
 Run with:
     streamlit run app/streamlit_app.py
@@ -20,7 +20,7 @@ from app import config, orchestrator
 
 
 st.set_page_config(
-    page_title="Analytics Copilot",
+    page_title="Switchboard",
     page_icon="💊",
     layout="wide",
 )
@@ -95,7 +95,7 @@ def _sidebar() -> None:
 
 
 def main() -> None:
-    st.title("💊 Analytics Copilot")
+    st.title("💊 Switchboard")
     st.caption(
         "Ask a question. The router decides whether to query the sales database, "
         "the support docs, or both — and Claude composes one cited answer."
