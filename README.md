@@ -1,4 +1,4 @@
-# Pharma rep copilot — hybrid RAG
+# Analytics copilot — hybrid RAG
 
 A support assistant for pharma sales reps. A router classifies each question and sends
 it down the right path:

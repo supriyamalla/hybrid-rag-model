@@ -1,4 +1,4 @@
-"""Streamlit chat UI for the pharma rep copilot.
+"""Streamlit chat UI for the analytics copilot.
 
 Run with:
     streamlit run app/streamlit_app.py
@@ -20,7 +20,7 @@ from app import config, orchestrator
 
 
 st.set_page_config(
-    page_title="Pharma Rep Copilot",
+    page_title="Analytics Copilot",
     page_icon="💊",
     layout="wide",
 )
@@ -95,7 +95,7 @@ def _sidebar() -> None:
 
 
 def main() -> None:
-    st.title("💊 Pharma Rep Copilot")
+    st.title("💊 Analytics Copilot")
     st.caption(
         "Ask a question. The router decides whether to query the sales database, "
         "the support docs, or both — and Claude composes one cited answer."
